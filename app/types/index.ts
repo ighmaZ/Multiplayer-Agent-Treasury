@@ -6,7 +6,6 @@ export interface InvoiceData {
   amount: string;         // e.g., "5000 USDC"
   recipient: string;      // Vendor/company name
   purpose: string;        // What the payment is for
-  confidence: number;     // 0-1 extraction confidence
 }
 
 // Etherscan security scan result
