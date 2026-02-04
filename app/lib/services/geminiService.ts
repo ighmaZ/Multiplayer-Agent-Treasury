@@ -25,7 +25,7 @@ export async function extractInvoiceFromPDF(
 
     // Use Gemini 2.0 Flash with multimodal capabilities
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.0-flash',
     });
 
     // Load prompt from prompts/gemini-prompts.md
