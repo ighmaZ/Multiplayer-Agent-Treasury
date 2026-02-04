@@ -1,85 +1,153 @@
-// page.tsx
-// Main page for CFO Agent App
+"use client";
 
+import { Sidebar } from '@/app/components/Sidebar';
+import { AgentProvider, useAgent } from '@/app/components/AgentProvider';
 import { ChatInterface } from '@/app/components/chat/ChatInterface';
-import { AgentProvider } from '@/app/components/AgentProvider';
+import { 
+  Share2, 
+  MoreVertical, 
+  ChevronDown, 
+  Plus, 
+  AudioWaveform, 
+  ArrowUp,
+  BookOpen,
+  Laptop,
+  Globe,
+  ShieldAlert,
+  FileText,
+  Activity
+} from 'lucide-react';
+import { useState } from 'react';
+
+function Header() {
+  return (
+    <header className="flex h-16 items-center justify-between px-6">
+    
+
+    
+    </header>
+  );
+}
+
+function MainContent() {
+  const { state: agentState } = useAgent();
+  
+  // If the agent has state (meaning a file was uploaded or chat started), show the full chat interface
+  // modifying the logic to show ChatInterface if active, otherwise show the dashboard
+  // The ChatInterface handles its own empty state, but our Dashboard is a nicer "Empty State".
+  // let's wrap the Dashboard as the "no state" view.
+  
+  if (agentState) {
+    return (
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header />
+        <div className="flex-1 overflow-hidden">
+           <ChatInterface />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-1 flex-col overflow-hidden">
+       <Header />
+       <div className="flex flex-1 flex-col items-center justify-center px-4 pb-20 overflow-y-auto">
+            <div className="w-full max-w-3xl space-y-12">
+              
+              {/* Hero Text */}
+              <div className="text-center space-y-4">
+                <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
+                  Hello, Finance Team
+                </h1>
+                <h2 className="text-3xl font-medium text-zinc-300 sm:text-4xl">
+                  Let&apos;s analyze your invoices.
+                </h2>
+           
+              </div>
+
+              {/* Input Area - We wrap ChatInterface here but styled or just the input part? 
+                  Actually, ChatInterface has a FileUpload. 
+                  Let's just render ChatInterface but customize it? 
+                  Better: Render a customized "Start" area that triggers the same actions.
+                  However, ChatInterface logic is internal state. 
+                  Let's just render the ChatInterface, but maybe we can't easily style it to look like the dashboard input without refactoring ChatInterface.
+                  
+                  Alternative: Render the dashboard, and when they interact, we switch to ChatInterface.
+                  But ChatInterface requires a file upload to start. 
+                  So let's make the dashboard generic input trigger a file upload?
+              */}
+              
+              <div className="relative rounded-2xl bg-white shadow-[0_0_40px_-10px_rgba(0,0,0,0.05)] ring-1 ring-zinc-100 p-6">
+                  <div>
+                     <ChatInterface />
+                  </div>
+              </div>
+
+              {/* Cards Grid - Replacing with relevant info */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                {/* Card 1 */}
+                <div className="group flex flex-col items-start rounded-xl border border-dashed border-zinc-200 bg-white p-5 text-left transition-all hover:border-zinc-300 hover:shadow-sm">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#ccf437] text-black">
+                    <FileText size={20} />
+                  </div>
+                  <h3 className="mb-1 font-semibold text-zinc-900 group-hover:text-black">
+                    Invoice Analysis
+                  </h3>
+                  <p className="text-xs text-zinc-500 leading-snug">
+                     Upload PDF invoices to extract extraction wallet addresses and payment details automatically.
+                  </p>
+                </div>
+
+                {/* Card 2 */}
+                <div className="group flex flex-col items-start rounded-xl border border-dashed border-zinc-200 bg-white p-5 text-left transition-all hover:border-zinc-300 hover:shadow-sm">
+                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#ccf437] text-black">
+                    <ShieldAlert size={20} />
+                  </div>
+                  <h3 className="mb-1 font-semibold text-zinc-900 group-hover:text-black">
+                    Security Scan
+                  </h3>
+                  <p className="text-xs text-zinc-500 leading-snug">
+                    Real-time Etherscan checks to identify high-risk wallets and suspicious history.
+                  </p>
+                </div>
+
+                {/* Card 3 */}
+                <div className="group flex flex-col items-start rounded-xl border border-dashed border-zinc-200 bg-white p-5 text-left transition-all hover:border-zinc-300 hover:shadow-sm">
+                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#ccf437] text-black">
+                    <Activity size={20} />
+                  </div>
+                  <h3 className="mb-1 font-semibold text-zinc-900 group-hover:text-black">
+                     Risk Assessment
+                  </h3>
+                  <div className="mt-2 space-y-1">
+                      <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div> Low Risk (0-39)
+                      </div>
+                       <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                        <div className="h-2 w-2 rounded-full bg-yellow-500"></div> Medium Risk (40-69)
+                      </div>
+                       <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                        <div className="h-2 w-2 rounded-full bg-red-500"></div> High Risk (70+)
+                      </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+    </div>
+  )
+}
 
 export default function Home() {
   return (
     <AgentProvider>
-      <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-        {/* Header */}
-        <header className="border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="mx-auto flex max-w-7xl items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                CFO Agent
-              </h1>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                AI-powered invoice analysis & wallet security scanner
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500"></div>
-              <span className="text-xs text-zinc-500">System Online</span>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-2">
-            {/* Chat Interface */}
-            <div className="flex h-[600px] flex-col rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  Chat
-                </h2>
-              </div>
-              <div className="flex-1">
-                <ChatInterface />
-              </div>
-            </div>
-
-            {/* Agent Trace Visualization */}
-            <div className="space-y-6">
-          
-              {/* Info Cards */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                  <h3 className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    How it works
-                  </h3>
-                  <ul className="space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-                    <li>1. Upload invoice PDF</li>
-                    <li>2. AI extracts wallet address</li>
-                    <li>3. Security scan via Etherscan</li>
-                    <li>4. Get CFO recommendation</li>
-                  </ul>
-                </div>
-
-                <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                  <h3 className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    Risk Levels
-                  </h3>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                      <span className="text-zinc-600 dark:text-zinc-400">0-39: Low Risk</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-                      <span className="text-zinc-600 dark:text-zinc-400">40-69: Medium Risk</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                      <span className="text-zinc-600 dark:text-zinc-400">70+: High Risk</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="flex h-screen w-full overflow-hidden bg-black font-sans">
+        <Sidebar />
+        
+        {/* Main Content Area */}
+        <main className="flex flex-1 flex-col overflow-hidden bg-white shadow-2xl transition-all md:m-3 md:rounded-[32px] md:border md:border-zinc-200/50">
+           <MainContent /> 
         </main>
       </div>
     </AgentProvider>
