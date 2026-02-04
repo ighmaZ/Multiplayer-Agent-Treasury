@@ -39,6 +39,22 @@ export interface AgentLog {
 }
 
 /**
+ * Enhanced thinking log for real-time AI reasoning display
+ */
+export interface ThinkingLog {
+  id: string;
+  step: 'pdfProcessor' | 'walletScanner' | 'cfoAssistant' | 'complete';
+  status: 'pending' | 'thinking' | 'processing' | 'success' | 'error';
+  title: string;
+  icon: 'file' | 'shield' | 'brain' | 'check';
+  reasoning: string;
+  details?: string[];
+  progress?: number;
+  data?: any;
+  timestamp: Date;
+}
+
+/**
  * Initial state factory
  */
 export function createInitialState(pdfBuffer: Buffer, fileName: string): AgentState {
@@ -76,5 +92,43 @@ export function addLog(
         data,
       },
     ],
+  };
+}
+
+/**
+ * Create a thinking log entry for real-time streaming
+ */
+export function createThinkingLog(
+  step: ThinkingLog['step'],
+  status: ThinkingLog['status'],
+  reasoning: string,
+  options?: {
+    title?: string;
+    icon?: ThinkingLog['icon'];
+    details?: string[];
+    progress?: number;
+    data?: any;
+  }
+): ThinkingLog {
+  const stepConfig = {
+    pdfProcessor: { title: 'Extracting Invoice Data', icon: 'file' as const },
+    walletScanner: { title: 'Scanning Wallet Security', icon: 'shield' as const },
+    cfoAssistant: { title: 'Analyzing with CFO Assistant', icon: 'brain' as const },
+    complete: { title: 'Analysis Complete', icon: 'check' as const },
+  };
+
+  const config = stepConfig[step];
+
+  return {
+    id: `${step}-${Date.now()}`,
+    step,
+    status,
+    title: options?.title || config.title,
+    icon: options?.icon || config.icon,
+    reasoning,
+    details: options?.details || [],
+    progress: options?.progress,
+    data: options?.data,
+    timestamp: new Date(),
   };
 }

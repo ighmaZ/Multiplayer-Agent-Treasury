@@ -1,17 +1,22 @@
 // components/chat/ChatInterface.tsx
-// Main chat interface component
+// Main chat interface component with streaming support
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { FileUpload } from './FileUpload';
 import { MessageList } from './MessageList';
+import { AgentThinkingTrace } from './AgentThinkingTrace';
 import { Send, Plus, FileText } from 'lucide-react';
 import { useAgent } from '../AgentProvider';
+import { ThinkingLog } from '@/app/lib/agents/state';
 
 export function ChatInterface() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { state: agentState, setState: setAgentState, isLoading, setIsLoading } = useAgent();
+  const [thinkingLogs, setThinkingLogs] = useState<ThinkingLog[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,27 +33,92 @@ export function ChatInterface() {
   const handleSubmit = async () => {
     if (!selectedFile) return;
 
+    // Clean up any existing connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
     setIsLoading(true);
+    setIsStreaming(true);
     setAgentState(null);
+    setThinkingLogs([]);
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch('/api/agents', {
+      // Use streaming API
+      const response = await fetch('/api/agents/stream', {
         method: 'POST',
         body: formData,
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to process invoice');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to start analysis');
       }
 
-      setAgentState(data.state);
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Failed to initialize stream reader');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.trim().startsWith('event: ')) {
+            const eventType = line.replace('event: ', '').split('\n')[0];
+            const dataMatch = line.match(/data: (.+)/);
+            
+            if (dataMatch) {
+              try {
+                const data = JSON.parse(dataMatch[1]);
+
+                switch (eventType) {
+                  case 'thinking':
+                    setThinkingLogs(prev => {
+                      // Update existing log or add new one
+                      const existingIndex = prev.findIndex(l => l.step === data.step);
+                      if (existingIndex >= 0) {
+                        const updated = [...prev];
+                        updated[existingIndex] = data;
+                        return updated;
+                      }
+                      return [...prev, data];
+                    });
+                    break;
+
+                  case 'complete':
+                    setAgentState(data);
+                    setIsStreaming(false);
+                    setIsLoading(false);
+                    break;
+
+                  case 'error':
+                    throw new Error(data.error || 'Analysis failed');
+                }
+              } catch (e) {
+                console.error('Failed to parse SSE data:', e);
+              }
+            }
+          }
+        }
+      }
+
     } catch (error) {
       console.error('Error processing invoice:', error);
+      setIsStreaming(false);
+      setIsLoading(false);
       setAgentState({
         pdfBuffer: null,
         fileName: selectedFile.name,
@@ -59,19 +129,49 @@ export function ChatInterface() {
         logs: [],
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  const clearAnalysis = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setSelectedFile(null);
+    setAgentState(null);
+    setThinkingLogs([]);
+    setIsStreaming(false);
+    setIsLoading(false);
+  }, [setAgentState, setIsLoading]);
 
   return (
       <div className="flex bg-transparent h-full flex-col">
       {/* Messages Area */}
-      {agentState && agentState.logs.length > 0 && (
-          <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Thinking Trace - Real-time AI reasoning */}
+        {(thinkingLogs.length > 0 || isStreaming) && (
+          <div className="max-w-2xl mx-auto">
+            <AgentThinkingTrace
+              logs={thinkingLogs}
+              isStreaming={isStreaming}
+            />
+          </div>
+        )}
+
+        {/* Results */}
+        {agentState && agentState.currentStep === 'complete' && (
+          <div className="max-w-2xl mx-auto">
             <MessageList state={agentState} isLoading={isLoading} />
           </div>
-      )}
+        )}
+
+        {/* Error State */}
+        {agentState && agentState.currentStep === 'error' && (
+          <div className="max-w-2xl mx-auto p-4 rounded-xl bg-rose-500/10 border border-rose-500/20">
+            <p className="text-sm text-rose-400">{agentState.error}</p>
+          </div>
+        )}
+      </div>
 
       {/* Input Area */}
       <div className="bg-transparent p-4 mt-auto">
@@ -125,13 +225,21 @@ export function ChatInterface() {
             </button>
           </div>
           
-          {selectedFile && !agentState && (
-             <div className="mt-2 text-center">
-                <span className="text-xs text-zinc-400">
-                  {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB) ready for upload
-                </span>
-             </div>
-          )}
+           {selectedFile && (
+              <div className="mt-2 flex items-center justify-center gap-3">
+                 <span className="text-xs text-zinc-400">
+                   {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                 </span>
+                 {(agentState || thinkingLogs.length > 0) && (
+                   <button
+                     onClick={clearAnalysis}
+                     className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                   >
+                     Clear
+                   </button>
+                 )}
+              </div>
+           )}
         </div>
       </div>
     </div>
