@@ -58,10 +58,10 @@ function MainContent() {
               
               {/* Hero Text */}
               <div className="text-center space-y-4">
-                <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
+                <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
                   Hello!
                 </h1>
-                  <div className="text-3xl font-medium text-zinc-300 sm:text-4xl h-20 sm:h-auto">
+                  <div className="text-xl font-medium text-zinc-300 sm:text-4xl min-h-[3rem] sm:min-h-0 sm:h-auto">
                     <Typewriter
                       options={{
                         strings: [

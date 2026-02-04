@@ -174,7 +174,7 @@ export function ChatInterface() {
       </div>
 
       {/* Input Area */}
-      <div className="bg-transparent p-4 mt-auto">
+      <div className="bg-transparent p-2 md:p-4 mt-auto">
         <div className="mx-auto max-w-2xl">
           <div className="relative flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-zinc-400 focus-within:ring-2 focus-within:ring-[#ccf437] transition-all">
             {/* File Upload Trigger */}
@@ -188,7 +188,7 @@ export function ChatInterface() {
                 id="file-upload"
               />
               <div 
-                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors
+                className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-colors
                   ${selectedFile 
                     ? 'bg-[#ccf437] text-black' 
                     : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
@@ -202,7 +202,7 @@ export function ChatInterface() {
             <input
               type="text"
               placeholder={selectedFile ? `Ready to analyze ${selectedFile.name}...` : "Upload an invoice to get started..."}
-              className="flex-1 bg-transparent px-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
+              className="flex-1 bg-transparent px-2 text-base md:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none min-w-0"
               disabled={isLoading}
             />
 
@@ -210,7 +210,7 @@ export function ChatInterface() {
             <button
               onClick={handleSubmit}
               disabled={!selectedFile || isLoading}
-              className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all
+              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-all
                 ${!selectedFile || isLoading
                   ? 'bg-black text-zinc-300'
                   : 'bg-black text-white hover:bg-zinc-800'
