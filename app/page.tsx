@@ -1,5 +1,7 @@
 "use client";
 
+import Typewriter from 'typewriter-effect';
+
 import { Sidebar } from '@/app/components/Sidebar';
 import { AgentProvider, useAgent } from '@/app/components/AgentProvider';
 import { ChatInterface } from '@/app/components/chat/ChatInterface';
@@ -57,13 +59,31 @@ function MainContent() {
               {/* Hero Text */}
               <div className="text-center space-y-4">
                 <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
-                  Hello, Finance Team
+                  Hello!
                 </h1>
-                <h2 className="text-3xl font-medium text-zinc-300 sm:text-4xl">
-                  Let&apos;s analyze your invoices.
-                </h2>
-           
-              </div>
+                  <div className="text-3xl font-medium text-zinc-300 sm:text-4xl h-20 sm:h-auto">
+                    <Typewriter
+                      options={{
+                        strings: [
+                          "Your AI-powered treasury team",
+                          "Automated budget checks in seconds",
+                          "From 3-5 days to 5 minutes",
+                          "Prepares, vets, and schedules transactions",
+                          "Your Smart CFO Assistant",
+                        ],
+                        autoStart: true,
+                        loop: true,
+                        delay: 50,
+                        deleteSpeed: 30,
+                      }}
+                    />
+                  </div>
+                </div>
+
+         
+            
+               
+             
 
               {/* Input Area - We wrap ChatInterface here but styled or just the input part? 
                   Actually, ChatInterface has a FileUpload. 

@@ -176,7 +176,7 @@ export function ChatInterface() {
       {/* Input Area */}
       <div className="bg-transparent p-4 mt-auto">
         <div className="mx-auto max-w-2xl">
-          <div className="relative flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-zinc-100 focus-within:ring-2 focus-within:ring-[#ccf437] transition-all">
+          <div className="relative flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-zinc-400 focus-within:ring-2 focus-within:ring-[#ccf437] transition-all">
             {/* File Upload Trigger */}
             <div className="relative">
               <input
@@ -212,7 +212,7 @@ export function ChatInterface() {
               disabled={!selectedFile || isLoading}
               className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all
                 ${!selectedFile || isLoading
-                  ? 'bg-zinc-100 text-zinc-300'
+                  ? 'bg-black text-zinc-300'
                   : 'bg-black text-white hover:bg-zinc-800'
                 }
               `}
