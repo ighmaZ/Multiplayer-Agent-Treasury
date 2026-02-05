@@ -16,6 +16,34 @@ function sendEvent(controller: ReadableStreamDefaultController, event: string, d
 }
 
 /**
+ * Create a throttled event sender to reduce UI flickering
+ * Only sends updates every intervalMs or when content grows significantly
+ */
+function createThrottledSender(
+  controller: ReadableStreamDefaultController,
+  intervalMs: number = 100
+) {
+  let lastSentTime = 0;
+  let lastSentLength = 0;
+  
+  return (event: string, data: unknown, forceUpdate: boolean = false) => {
+    const now = Date.now();
+    const currentLength = typeof data === 'object' && data !== null && 'reasoning' in data 
+      ? (data as { reasoning: string }).reasoning.length 
+      : 0;
+    
+    // Send if: forced, time elapsed, or content grew significantly (50+ chars)
+    if (forceUpdate || 
+        (now - lastSentTime >= intervalMs) || 
+        (currentLength - lastSentLength >= 50)) {
+      sendEvent(controller, event, data);
+      lastSentTime = now;
+      lastSentLength = currentLength;
+    }
+  };
+}
+
+/**
  * PDF Processor with REAL LLM streaming
  */
 async function pdfProcessorWithStream(
@@ -39,14 +67,17 @@ async function pdfProcessorWithStream(
 
     let accumulatedReasoning = '';
     let invoiceData = null;
+    
+    // Create throttled sender for smoother UI updates
+    const throttledSend = createThrottledSender(controller, 100);
 
     // Stream real LLM reasoning
     for await (const chunk of streamInvoiceExtraction(state.pdfBuffer, state.fileName)) {
       if (chunk.type === 'reasoning') {
         accumulatedReasoning += chunk.content;
         
-        // Send each reasoning chunk as it comes
-        sendEvent(controller, 'thinking', createThinkingLog(
+        // Send throttled updates to reduce UI flickering
+        throttledSend('thinking', createThinkingLog(
           'pdfProcessor',
           'processing',
           accumulatedReasoning,
@@ -58,6 +89,14 @@ async function pdfProcessorWithStream(
         invoiceData = chunk.content;
       }
     }
+    
+    // Send final accumulated state
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'pdfProcessor',
+      'processing',
+      accumulatedReasoning,
+      { progress: 95 }
+    ));
 
     if (!invoiceData || typeof invoiceData === 'string') {
       throw new Error('Failed to extract invoice data');
@@ -226,6 +265,9 @@ async function cfoAssistantWithStream(
 
     let accumulatedReasoning = '';
     let recommendation = null;
+    
+    // Create throttled sender for smoother UI updates
+    const throttledSend = createThrottledSender(controller, 100);
 
     // Stream real LLM reasoning
     for await (const chunk of streamCFORecommendation(
@@ -240,8 +282,8 @@ async function cfoAssistantWithStream(
       if (chunk.type === 'reasoning') {
         accumulatedReasoning += chunk.content;
         
-        // Send each reasoning chunk as it comes
-        sendEvent(controller, 'thinking', createThinkingLog(
+        // Send throttled updates to reduce UI flickering
+        throttledSend('thinking', createThinkingLog(
           'cfoAssistant',
           'processing',
           accumulatedReasoning,
@@ -253,6 +295,14 @@ async function cfoAssistantWithStream(
         recommendation = chunk.content;
       }
     }
+    
+    // Send final accumulated state
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'cfoAssistant',
+      'processing',
+      accumulatedReasoning,
+      { progress: 95 }
+    ));
 
     if (!recommendation || typeof recommendation === 'string') {
       throw new Error('Failed to generate recommendation');

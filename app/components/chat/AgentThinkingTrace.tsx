@@ -113,13 +113,22 @@ function StepIcon({ icon, status }: { icon: ThinkingLog['icon']; status: Thinkin
   );
 }
 
-// Individual log entry component
+// Individual log entry component with stable layout
 function LogEntry({ log, isLatest, isExpanded, onToggle, isTyping }: LogEntryProps) {
   const { displayedText, isComplete } = useTypewriter(
     log.reasoning,
     25,
     isLatest && isTyping
   );
+  
+  const textRef = useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll text container to bottom as content grows
+  useEffect(() => {
+    if (textRef.current && isLatest && isTyping) {
+      textRef.current.scrollTop = textRef.current.scrollHeight;
+    }
+  }, [displayedText, isLatest, isTyping]);
 
   const getStatusIndicator = () => {
     switch (log.status) {
@@ -150,13 +159,7 @@ function LogEntry({ log, isLatest, isExpanded, onToggle, isTyping }: LogEntryPro
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="relative"
-    >
+    <div className="relative">
       {/* Timeline connector */}
       <div className="absolute left-4 top-10 bottom-0 w-px bg-gradient-to-b from-zinc-700/50 to-transparent" />
 
@@ -185,47 +188,36 @@ function LogEntry({ log, isLatest, isExpanded, onToggle, isTyping }: LogEntryPro
             )}
           </div>
 
-          {/* Reasoning text with typewriter */}
-          <div className="text-sm text-zinc-400 leading-relaxed">
+          {/* Reasoning text - FIXED HEIGHT with scroll */}
+          <div 
+            ref={textRef}
+            className="text-sm text-zinc-400 leading-relaxed h-[4.5rem] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+            style={{ contain: 'strict' }}
+          >
             <span className="font-mono text-zinc-500">&gt; </span>
-            {displayedText}
+            <span className="break-words whitespace-pre-wrap">{displayedText}</span>
             {isLatest && isTyping && !isComplete && <TypingCursor />}
           </div>
 
           {/* Expandable details */}
-          <AnimatePresence>
-            {isExpanded && log.details && log.details.length > 0 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-3 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                  <ul className="space-y-1.5">
-                    {log.details.map((detail, idx) => (
-                      <motion.li
-                        key={idx}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="text-xs text-zinc-500 flex items-start gap-2"
-                      >
-                        <span className="text-zinc-600 mt-0.5">•</span>
-                        <span className="font-mono">{detail}</span>
-                      </motion.li>
-                    ))}
-                  </ul>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-
+          {isExpanded && log.details && log.details.length > 0 && (
+            <div className="mt-3 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
+              <ul className="space-y-1.5">
+                {log.details.map((detail, idx) => (
+                  <li
+                    key={idx}
+                    className="text-xs text-zinc-500 flex items-start gap-2"
+                  >
+                    <span className="text-zinc-600 mt-0.5">•</span>
+                    <span className="font-mono">{detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -302,12 +294,20 @@ export function AgentThinkingTrace({ logs, isStreaming, onComplete }: AgentThink
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new logs arrive
+  // Auto-scroll to bottom when new logs arrive (debounced to reduce flickering)
   useEffect(() => {
     if (scrollRef.current && isExpanded) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTo({
+            top: scrollRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      });
     }
-  }, [logs, isExpanded]);
+  }, [logs.length, isExpanded]);
 
   // Collapse automatically when streaming completes
   useEffect(() => {
@@ -378,19 +378,22 @@ export function AgentThinkingTrace({ logs, isStreaming, onComplete }: AgentThink
             <div
               ref={scrollRef}
               className="max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+              style={{ 
+                contain: 'layout style',
+                scrollBehavior: 'smooth',
+                overflowAnchor: 'none'
+              }}
             >
-              <AnimatePresence initial={false}>
-                {logs.map((log, index) => (
-                  <LogEntry
-                    key={log.id}
-                    log={log}
-                    isLatest={index === logs.length - 1}
-                    isExpanded={expandedLogs.has(log.id)}
-                    onToggle={() => toggleLogExpansion(log.id)}
-                    isTyping={isStreaming}
-                  />
-                ))}
-              </AnimatePresence>
+              {logs.map((log, index) => (
+                <LogEntry
+                  key={log.id}
+                  log={log}
+                  isLatest={index === logs.length - 1}
+                  isExpanded={expandedLogs.has(log.id)}
+                  onToggle={() => toggleLogExpansion(log.id)}
+                  isTyping={isStreaming}
+                />
+              ))}
             </div>
           </motion.div>
         )}
