@@ -3,9 +3,8 @@
 
 import { NextRequest } from 'next/server';
 import { AgentState, createInitialState, ThinkingLog, createThinkingLog } from '@/app/lib/agents/state';
-import { extractInvoiceFromPDF } from '@/app/lib/services/geminiService';
+import { extractInvoiceFromPDF, streamInvoiceExtraction, streamCFORecommendation } from '@/app/lib/services/geminiService';
 import { scanWalletAddress } from '@/app/lib/services/etherscanService';
-import { generateCFORecommendation } from '@/app/lib/services/geminiService';
 
 /**
  * Send SSE event through controller
@@ -17,57 +16,52 @@ function sendEvent(controller: ReadableStreamDefaultController, event: string, d
 }
 
 /**
- * PDF Processor with streaming
+ * PDF Processor with REAL LLM streaming
  */
 async function pdfProcessorWithStream(
   state: AgentState,
   controller: ReadableStreamDefaultController
 ): Promise<AgentState> {
-  console.log('📄 PDF Processor Node: Starting extraction...');
+  console.log('📄 PDF Processor Node: Starting real LLM streaming extraction...');
 
   try {
-    // Send initial thinking state
-    sendEvent(controller, 'thinking', createThinkingLog(
-      'pdfProcessor',
-      'thinking',
-      "I'm examining this PDF invoice to extract key payment information. I need to identify the recipient wallet address, payment amount, vendor name, and the purpose of this transaction...",
-      { progress: 10 }
-    ));
-
-    await new Promise(resolve => setTimeout(resolve, 800));
-
     if (!state.pdfBuffer) {
       throw new Error('No PDF buffer provided');
     }
 
-    // Update to processing
+    // Send initial status
     sendEvent(controller, 'thinking', createThinkingLog(
       'pdfProcessor',
-      'processing',
-      "Scanning document structure and identifying text regions. Looking for wallet addresses (0x...), amounts with currency symbols, vendor details, and payment descriptions...",
-      { progress: 35 }
+      'thinking',
+      'Starting PDF analysis...',
+      { progress: 5 }
     ));
 
-    await new Promise(resolve => setTimeout(resolve, 600));
+    let accumulatedReasoning = '';
+    let invoiceData = null;
 
-    // Extract invoice data
-    const invoiceData = await extractInvoiceFromPDF(state.pdfBuffer, state.fileName);
-
-    sendEvent(controller, 'thinking', createThinkingLog(
-      'pdfProcessor',
-      'processing',
-      `Found wallet address: ${invoiceData.walletAddress.substring(0, 12)}... Now validating the Ethereum address format and extracting additional payment details...`,
-      { 
-        progress: 65,
-        details: [
-          `Wallet: ${invoiceData.walletAddress.substring(0, 16)}...`,
-          `Amount: ${invoiceData.amount}`,
-          `Recipient: ${invoiceData.recipient}`,
-        ]
+    // Stream real LLM reasoning
+    for await (const chunk of streamInvoiceExtraction(state.pdfBuffer, state.fileName)) {
+      if (chunk.type === 'reasoning') {
+        accumulatedReasoning += chunk.content;
+        
+        // Send each reasoning chunk as it comes
+        sendEvent(controller, 'thinking', createThinkingLog(
+          'pdfProcessor',
+          'processing',
+          accumulatedReasoning,
+          { 
+            progress: Math.min(90, 10 + (accumulatedReasoning.length / 20))
+          }
+        ));
+      } else if (chunk.type === 'result') {
+        invoiceData = chunk.content;
       }
-    ));
+    }
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    if (!invoiceData || typeof invoiceData === 'string') {
+      throw new Error('Failed to extract invoice data');
+    }
 
     // Validate address
     const isValidAddress = /^0x[a-fA-F0-9]{40}$/.test(invoiceData.walletAddress);
@@ -79,7 +73,7 @@ async function pdfProcessorWithStream(
     sendEvent(controller, 'thinking', createThinkingLog(
       'pdfProcessor',
       'success',
-      `Successfully extracted invoice data. Wallet address validated (${invoiceData.walletAddress.substring(0, 10)}...). Ready to proceed with security analysis of this recipient address.`,
+      `Extraction complete! Found wallet ${invoiceData.walletAddress.substring(0, 10)}...`,
       {
         progress: 100,
         data: {
@@ -209,37 +203,32 @@ async function walletScannerWithStream(
 }
 
 /**
- * CFO Assistant with streaming
+ * CFO Assistant with REAL LLM streaming
  */
 async function cfoAssistantWithStream(
   state: AgentState,
   controller: ReadableStreamDefaultController
 ): Promise<AgentState> {
-  console.log('🤖 CFO Assistant Node: Generating recommendation...');
+  console.log('🤖 CFO Assistant Node: Starting real LLM streaming analysis...');
 
   try {
     if (!state.invoiceData || !state.securityScan) {
       throw new Error('Missing required data for analysis');
     }
 
-    // Send initial thinking state
+    // Send initial status
     sendEvent(controller, 'thinking', createThinkingLog(
       'cfoAssistant',
       'thinking',
-      `Analyzing all collected data: Payment of ${state.invoiceData.amount} to ${state.invoiceData.recipient} with risk score ${state.securityScan.riskScore}/100. Evaluating against treasury policies...`,
-      { progress: 20 }
+      'Starting CFO analysis...',
+      { progress: 5 }
     ));
 
-    await new Promise(resolve => setTimeout(resolve, 800));
+    let accumulatedReasoning = '';
+    let recommendation = null;
 
-    sendEvent(controller, 'thinking', createThinkingLog(
-      'cfoAssistant',
-      'processing',
-      `Cross-referencing invoice details with security profile. Checking for: transaction history consistency, contract verification, known entity status, and alignment with payment purpose: "${state.invoiceData.purpose}"...`,
-      { progress: 50 }
-    ));
-
-    const recommendation = await generateCFORecommendation(
+    // Stream real LLM reasoning
+    for await (const chunk of streamCFORecommendation(
       state.invoiceData,
       {
         riskScore: state.securityScan.riskScore,
@@ -247,38 +236,38 @@ async function cfoAssistantWithStream(
         isVerified: state.securityScan.isVerified,
         warnings: state.securityScan.warnings,
       }
-    );
-
-    await new Promise(resolve => setTimeout(resolve, 400));
-
-    sendEvent(controller, 'thinking', createThinkingLog(
-      'cfoAssistant',
-      'processing',
-      `Recommendation formulated: ${recommendation.recommendation}. Risk level assessed as ${recommendation.riskLevel}. Generating detailed explanation with supporting factors...`,
-      {
-        progress: 80,
-        details: [
-          `Decision: ${recommendation.recommendation}`,
-          `Risk Level: ${recommendation.riskLevel}`,
-          ...recommendation.details.slice(0, 2),
-        ]
+    )) {
+      if (chunk.type === 'reasoning') {
+        accumulatedReasoning += chunk.content;
+        
+        // Send each reasoning chunk as it comes
+        sendEvent(controller, 'thinking', createThinkingLog(
+          'cfoAssistant',
+          'processing',
+          accumulatedReasoning,
+          { 
+            progress: Math.min(90, 10 + (accumulatedReasoning.length / 20))
+          }
+        ));
+      } else if (chunk.type === 'result') {
+        recommendation = chunk.content;
       }
-    ));
+    }
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    if (!recommendation || typeof recommendation === 'string') {
+      throw new Error('Failed to generate recommendation');
+    }
 
     // Send success
     sendEvent(controller, 'thinking', createThinkingLog(
       'cfoAssistant',
       'success',
-      `Analysis complete. Final recommendation: ${recommendation.recommendation}. ${recommendation.summary}`,
+      `Analysis complete: ${recommendation.recommendation}`,
       {
         progress: 100,
         data: recommendation
       }
     ));
-
-    await new Promise(resolve => setTimeout(resolve, 300));
 
     // Send complete event
     sendEvent(controller, 'complete', {

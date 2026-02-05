@@ -215,3 +215,191 @@ export async function generateCFORecommendation(
     }
   }
 }
+
+/**
+ * Stream invoice extraction with real LLM reasoning
+ * Yields text chunks as the LLM thinks through the extraction
+ */
+export async function* streamInvoiceExtraction(
+  pdfBuffer: Buffer,
+  fileName: string
+): AsyncGenerator<{ type: 'reasoning' | 'result'; content: string | InvoiceData }> {
+  console.log(`📄 Streaming PDF extraction: ${fileName}`);
+
+  const base64PDF = pdfBuffer.toString('base64');
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+  });
+
+  const streamingPrompt = `You are a CFO assistant analyzing an invoice PDF.
+
+Think out loud as you extract the following information:
+1. Wallet Address (Ethereum 0x...)
+2. Amount with currency
+3. Recipient/vendor name
+4. Payment purpose
+
+First, describe what you see in the document as you scan it. Share your reasoning process.
+Then at the very end, output ONLY a JSON block with:
+\`\`\`json
+{
+  "walletAddress": "0x...",
+  "amount": "...",
+  "recipient": "...",
+  "purpose": "..."
+}
+\`\`\``;
+
+  const result = await model.generateContentStream({
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: streamingPrompt },
+          {
+            inlineData: {
+              mimeType: 'application/pdf',
+              data: base64PDF,
+            },
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 2048,
+    },
+  });
+
+  let fullText = '';
+
+  for await (const chunk of result.stream) {
+    const text = chunk.text();
+    fullText += text;
+    yield { type: 'reasoning', content: text };
+  }
+
+  // Extract JSON from the full response
+  const jsonMatch = fullText.match(/```json\s*([\s\S]*?)\s*```/) || fullText.match(/\{[\s\S]*\}/);
+  
+  if (jsonMatch) {
+    try {
+      const jsonStr = jsonMatch[1] || jsonMatch[0];
+      const extractedData = JSON.parse(jsonStr);
+      
+      const invoiceData: InvoiceData = {
+        walletAddress: extractedData.walletAddress || 'NOT_FOUND',
+        amount: extractedData.amount || 'NOT_FOUND',
+        recipient: extractedData.recipient || 'NOT_FOUND',
+        purpose: extractedData.purpose || 'NOT_FOUND',
+      };
+
+      yield { type: 'result', content: invoiceData };
+    } catch {
+      throw new Error('Failed to parse invoice data from LLM response');
+    }
+  } else {
+    throw new Error('No JSON found in LLM response');
+  }
+}
+
+/**
+ * Stream CFO recommendation with real LLM reasoning
+ * Yields text chunks as the LLM analyzes and decides
+ */
+export async function* streamCFORecommendation(
+  invoiceData: InvoiceData,
+  securityScan: {
+    riskScore: number;
+    isContract: boolean;
+    isVerified: boolean;
+    warnings: string[];
+  }
+): AsyncGenerator<{ type: 'reasoning' | 'result'; content: string | CFORecommendation }> {
+  console.log('🤖 Streaming CFO recommendation...');
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+  });
+
+  const streamingPrompt = `You are a CFO assistant making a payment decision.
+
+INVOICE DATA:
+- Wallet: ${invoiceData.walletAddress}
+- Amount: ${invoiceData.amount}
+- Recipient: ${invoiceData.recipient}
+- Purpose: ${invoiceData.purpose}
+
+SECURITY SCAN RESULTS:
+- Risk Score: ${securityScan.riskScore}/100
+- Is Smart Contract: ${securityScan.isContract ? 'Yes' : 'No'}
+- Contract Verified: ${securityScan.isVerified ? 'Yes' : 'No'}
+- Warnings: ${securityScan.warnings.length > 0 ? securityScan.warnings.join(', ') : 'None'}
+
+DECISION THRESHOLDS:
+- 0-39: LOW risk → APPROVE
+- 40-69: MEDIUM risk → REVIEW  
+- 70+: HIGH risk → REJECT
+
+Think through your analysis step by step. Consider:
+1. The payment amount and recipient legitimacy
+2. The wallet's security profile and any red flags
+3. Whether the purpose aligns with expected vendor payments
+
+Share your reasoning process, then conclude with:
+\`\`\`json
+{
+  "recommendation": "APPROVE|REVIEW|REJECT",
+  "summary": "One sentence summary",
+  "riskLevel": "LOW|MEDIUM|HIGH",
+  "details": ["Key point 1", "Key point 2", "Key point 3"]
+}
+\`\`\``;
+
+  const result = await model.generateContentStream(streamingPrompt);
+
+  let fullText = '';
+
+  for await (const chunk of result.stream) {
+    const text = chunk.text();
+    fullText += text;
+    yield { type: 'reasoning', content: text };
+  }
+
+  // Extract JSON from the full response
+  const jsonMatch = fullText.match(/```json\s*([\s\S]*?)\s*```/) || fullText.match(/\{[\s\S]*\}/);
+
+  if (jsonMatch) {
+    try {
+      const jsonStr = jsonMatch[1] || jsonMatch[0];
+      const recommendation = JSON.parse(jsonStr);
+
+      const result: CFORecommendation = {
+        recommendation: recommendation.recommendation,
+        summary: recommendation.summary,
+        riskLevel: recommendation.riskLevel,
+        details: recommendation.details || [],
+      };
+
+      yield { type: 'result', content: result };
+    } catch {
+      // Fallback based on risk
+      const fallback: CFORecommendation = {
+        recommendation: securityScan.riskScore >= 70 ? 'REJECT' : securityScan.riskScore >= 40 ? 'REVIEW' : 'APPROVE',
+        summary: 'Analysis complete',
+        riskLevel: securityScan.riskScore >= 70 ? 'HIGH' : securityScan.riskScore >= 40 ? 'MEDIUM' : 'LOW',
+        details: ['Based on security scan results'],
+      };
+      yield { type: 'result', content: fallback };
+    }
+  }
+}
+
+// Type for CFO Recommendation (needed for streaming function)
+interface CFORecommendation {
+  recommendation: 'APPROVE' | 'REVIEW' | 'REJECT';
+  summary: string;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  details: string[];
+}
