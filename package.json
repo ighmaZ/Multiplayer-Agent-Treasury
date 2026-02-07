@@ -23,9 +23,10 @@
     "pdf2pic": "^3.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-hot-toast": "^2.6.0",
     "reactflow": "^11.11.4",
-    "viem": "latest",
     "typewriter-effect": "^2.22.0",
+    "viem": "latest",
     "zod": "^4.3.6"
   },
   "devDependencies": {
