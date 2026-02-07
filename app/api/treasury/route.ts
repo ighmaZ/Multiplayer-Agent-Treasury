@@ -7,8 +7,8 @@ import type { TreasuryDashboardData, WalletData, TreasuryTransaction, TokenBalan
 
 const WALLETS_CONFIG = [
   {
-    id: process.env.CIRCLE_BASE_SEPOLIA_WALLET_ID!,
-    address: process.env.CIRCLE_BASE_SEPOLIA_WALLET_ADDRESS!,
+    id: process.env.NEXT_PUBLIC_CIRCLE_ETH_SEPOLIA_WALLET_ID!,
+    address: process.env.CIRCLE_ETH_SEPOLIA_WALLET_ADDRESS!,
     name: 'Base Sepolia',
     blockchain: 'BASE-SEPOLIA',
   },
