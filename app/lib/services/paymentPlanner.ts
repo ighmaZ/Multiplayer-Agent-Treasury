@@ -183,7 +183,7 @@ function buildSwapAndPayTx(
   v4Planner.addAction(Actions.TAKE, [USDC_ADDRESS, recipient, amountOut.toString()]);
 
   const routePlanner = new RoutePlanner();
-  routePlanner.addCommand(CommandType.V4_SWAP, [v4Planner.actions, v4Planner.params]);
+  routePlanner.addCommand(CommandType.V4_SWAP, [v4Planner.finalize()]);
 
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 20);
   const data = encodeFunctionData({
