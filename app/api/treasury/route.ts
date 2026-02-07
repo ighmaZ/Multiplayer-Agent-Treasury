@@ -9,11 +9,11 @@ const WALLETS_CONFIG = [
   {
     id: process.env.NEXT_PUBLIC_CIRCLE_ETH_SEPOLIA_WALLET_ID!,
     address: process.env.CIRCLE_ETH_SEPOLIA_WALLET_ADDRESS!,
-    name: 'Base Sepolia',
-    blockchain: 'BASE-SEPOLIA',
+    name: 'ETH Sepolia',
+    blockchain: 'ETH-SEPOLIA',
   },
   {
-    id: process.env.CIRCLE_ARC_WALLET_ID!,
+    id: process.env.NEXT_PUBLIC_CIRCLE_ARC_WALLET_ID!,
     address: process.env.CIRCLE_ARC_WALLET_ADDRESS!,
     name: 'Arc Testnet',
     blockchain: 'ARC-TESTNET',
@@ -25,27 +25,79 @@ for (const w of WALLETS_CONFIG) {
   WALLET_LABELS[w.id] = w.name;
 }
 
-function tokenAmountToUsd(symbol: string, amount: string): number {
+// DIA Oracle API — fetch live USD prices for tokens
+const DIA_API_BASE = 'https://api.diadata.org/v1/quotation';
+
+interface DiaQuotation {
+  Symbol: string;
+  Price: number;
+}
+
+// Cache prices for 60 seconds to avoid hammering the API
+let priceCache: { prices: Record<string, number>; fetchedAt: number } | null = null;
+const CACHE_TTL_MS = 60_000;
+
+async function fetchLivePrices(): Promise<Record<string, number>> {
+  if (priceCache && Date.now() - priceCache.fetchedAt < CACHE_TTL_MS) {
+    return priceCache.prices;
+  }
+
+  const symbols = ['ETH', 'EURC'];
+  const results: Record<string, number> = {
+    USDC: 1, // USDC is pegged 1:1
+    USD: 1,
+  };
+
+  const fetches = symbols.map(async (symbol) => {
+    try {
+      const res = await fetch(`${DIA_API_BASE}/${symbol}`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        const data: DiaQuotation = await res.json();
+        results[symbol] = data.Price;
+      }
+    } catch {
+      // Fallback prices if DIA is unreachable
+      if (symbol === 'ETH') results.ETH = 2500;
+      if (symbol === 'EURC') results.EURC = 1.10;
+    }
+  });
+
+  await Promise.all(fetches);
+
+  priceCache = { prices: results, fetchedAt: Date.now() };
+  return results;
+}
+
+function tokenAmountToUsd(symbol: string, amount: string, prices: Record<string, number>): number {
   const val = parseFloat(amount) || 0;
-  // Stablecoins are ~1:1 USD. ETH approximated for testnet display only.
-  if (symbol === 'USDC' || symbol === 'EURC' || symbol === 'USD') return val;
-  if (symbol === 'ETH') return val * 2500; // rough approximation
-  return val;
+
+  // Normalize symbol — Circle returns "ETH-SEPOLIA" for testnet ETH
+  const normalized = symbol.replace('-SEPOLIA', '').toUpperCase();
+
+  if (prices[normalized] !== undefined) {
+    return val * prices[normalized];
+  }
+
+  // Fallback: treat unknown tokens as 0
+  return 0;
 }
 
 export async function GET() {
   try {
-    // Fetch balances for each wallet + transactions in parallel
-    const [basSepoliaBalances, arcBalances, transactions] = await Promise.all([
+    // Fetch balances, transactions, and live prices in parallel
+    const [ethSepoliaBalances, arcBalances, transactions, prices] = await Promise.all([
       getWalletTokenBalances(WALLETS_CONFIG[0].id),
       getWalletTokenBalances(WALLETS_CONFIG[1].id),
       getTransactions(
         WALLETS_CONFIG.map((w) => w.id),
         { pageSize: 20 }
       ),
+      fetchLivePrices(),
     ]);
 
-    const balancesByWallet = [basSepoliaBalances, arcBalances];
+    const balancesByWallet = [ethSepoliaBalances, arcBalances];
 
     // Build wallet data
     const wallets: WalletData[] = WALLETS_CONFIG.map((config, i) => {
@@ -56,7 +108,7 @@ export async function GET() {
         return {
           token: symbol,
           amount,
-          amountUsd: tokenAmountToUsd(symbol, amount),
+          amountUsd: tokenAmountToUsd(symbol, amount, prices),
           blockchain: config.blockchain,
         };
       });
