@@ -22,7 +22,7 @@ import {
   Wallet
 } from 'lucide-react';
 
-function Header(): JSX.Element {
+function Header(): React.JSX.Element {
   const {
     walletAddress,
     connectWallet,

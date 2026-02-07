@@ -142,12 +142,12 @@ function buildDirectTransferTx(recipient: string, amount: bigint): PreparedTrans
   const data = encodeFunctionData({
     abi: ERC20_ABI,
     functionName: 'transfer',
-    args: [recipient, amount],
+    args: [recipient as `0x${string}`, amount],
   });
 
   return {
     chainId: SEPOLIA_CHAIN_ID,
-    to: USDC_ADDRESS,
+    to: USDC_ADDRESS as `0x${string}`,
     data,
     value: '0x0',
     description: 'Transfer USDC to invoice recipient',
@@ -189,12 +189,16 @@ function buildSwapAndPayTx(
   const data = encodeFunctionData({
     abi: UNIVERSAL_ROUTER_ABI,
     functionName: 'execute',
-    args: [routePlanner.commands, routePlanner.inputs, deadline],
+    args: [
+      routePlanner.commands as `0x${string}`,
+      routePlanner.inputs as `0x${string}`[],
+      deadline,
+    ],
   });
 
   return {
     chainId: SEPOLIA_CHAIN_ID,
-    to: UNIVERSAL_ROUTER_ADDRESS,
+    to: UNIVERSAL_ROUTER_ADDRESS as `0x${string}`,
     data,
     value: toHex(maxAmountIn),
     description: 'Swap ETH to USDC and pay invoice in one transaction',
@@ -292,7 +296,7 @@ export async function buildPaymentPlan(
 
   const amountIn = quote[0];
   const slippageBps = getSlippageBps();
-  const maxAmountIn = (amountIn * BigInt(10_000 + slippageBps)) / 10_000n;
+  const maxAmountIn = (amountIn * BigInt(10000 + slippageBps)) / BigInt(10000);
 
   if (maxAmountIn > ethBalanceWei) {
     return {
