@@ -41,7 +41,7 @@ export interface PreparedTransaction {
 export interface PaymentPlan {
   status: 'READY' | 'INSUFFICIENT_FUNDS' | 'UNSUPPORTED_CURRENCY' | 'ERROR';
   method: 'DIRECT_USDC_TRANSFER' | 'SWAP_EXACT_OUT';
-  chain: 'sepolia';
+  chain: 'sepolia' | 'base-sepolia';
   payerAddress: string;
   recipientAddress: string;
   invoiceAmountRaw: string;

@@ -15,11 +15,14 @@ import { CommandType, RoutePlanner } from '@uniswap/universal-router-sdk';
 
 import { InvoiceData, PaymentPlan, PreparedTransaction } from '@/app/types';
 
+// Ethereum Sepolia chain configuration
 const SEPOLIA_CHAIN_ID = 11155111;
 const SEPOLIA_CHAIN_HEX = '0xaa36a7';
 
+// Uniswap V4 contract addresses on Ethereum Sepolia
 const UNIVERSAL_ROUTER_ADDRESS = '0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b';
 const V4_QUOTER_ADDRESS = '0x61b3f2011a92d183c7dbadbda940a7555ccf9227';
+// Circle USDC on Ethereum Sepolia
 const USDC_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
 const NATIVE_CURRENCY = '0x0000000000000000000000000000000000000000';
 const POOL_FEE = 3000;
@@ -101,6 +104,7 @@ const UNIVERSAL_ROUTER_ABI = [
   },
 ] as const;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cachedClient: ReturnType<typeof createPublicClient> | null = null;
 
 function getPublicClient() {
@@ -110,10 +114,11 @@ function getPublicClient() {
     throw new Error('Missing SEPOLIA_RPC_URL');
   }
   cachedClient = createPublicClient({
-    chain: sepolia,
+    // Use type assertion to avoid viem chain type conflicts
+    chain: sepolia as Parameters<typeof createPublicClient>[0]['chain'],
     transport: http(rpcUrl),
   });
-  return cachedClient;
+  return cachedClient!;
 }
 
 function normalizeCurrency(raw: string): 'USDC' | 'ETH' | 'UNKNOWN' {
@@ -133,7 +138,7 @@ function parseInvoiceAmount(amountRaw: string): { amount: string | null; currenc
 }
 
 function getSlippageBps(): number {
-  const raw = Number(process.env.SWAP_SLIPPAGE_BPS || '100');
+  const raw = Number(process.env.SWAP_SLIPPAGE_BPS || '500');
   if (Number.isFinite(raw) && raw >= 0) return raw;
   return 100;
 }

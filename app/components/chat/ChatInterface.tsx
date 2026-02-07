@@ -157,7 +157,7 @@ export function ChatInterface(): React.JSX.Element {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletId: agentState.paymentPlan.method === 'SWAP_EXACT_OUT'
-            ? process.env.NEXT_PUBLIC_CIRCLE_BASE_SEPOLIA_WALLET_ID
+            ? process.env.NEXT_PUBLIC_CIRCLE_ETH_SEPOLIA_WALLET_ID
             : process.env.NEXT_PUBLIC_CIRCLE_ARC_WALLET_ID,
           contractAddress: agentState.paymentPlan.preparedTransaction.to,
           callData: agentState.paymentPlan.preparedTransaction.data,

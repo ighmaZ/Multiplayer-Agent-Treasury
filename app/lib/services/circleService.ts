@@ -2,8 +2,21 @@
 // Circle developer-controlled wallets SDK wrapper (server-side only)
 
 import { initiateDeveloperControlledWalletsClient } from '@circle-fin/developer-controlled-wallets';
+import { formatUnits } from 'viem';
 
 let clientInstance: ReturnType<typeof initiateDeveloperControlledWalletsClient> | null = null;
+
+/**
+ * Convert hex wei value (e.g., "0x2386f26fc10000") to decimal ETH string (e.g., "0.01")
+ * Circle API expects amounts in decimal format, not hex wei
+ */
+function hexWeiToDecimalEth(hexValue: string | undefined): string | undefined {
+  if (!hexValue || hexValue === '0x0' || hexValue === '0x00') {
+    return undefined; // No value means no ETH being sent
+  }
+  const wei = BigInt(hexValue);
+  return formatUnits(wei, 18);
+}
 
 function getClient() {
   if (!clientInstance) {
@@ -83,11 +96,13 @@ export async function executeContractCall(params: {
   amount?: string;
 }) {
   const client = getClient();
+  // Convert hex wei (e.g., "0x2386f26fc10000") to decimal ETH (e.g., "0.01")
+  const decimalAmount = hexWeiToDecimalEth(params.amount);
   const response = await client.createContractExecutionTransaction({
     walletId: params.walletId,
     contractAddress: params.contractAddress,
     callData: params.callData,
-    ...(params.amount && { amount: params.amount }),
+    ...(decimalAmount && { amount: decimalAmount }),
     fee: {
       type: 'level',
       config: { feeLevel: 'HIGH' },

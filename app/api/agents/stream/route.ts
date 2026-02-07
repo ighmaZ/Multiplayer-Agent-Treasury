@@ -469,7 +469,7 @@ export async function POST(request: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const pdfBuffer = Buffer.from(arrayBuffer);
-    const payerAddress = process.env.CIRCLE_BASE_SEPOLIA_WALLET_ADDRESS || undefined;
+    const payerAddress = process.env.CIRCLE_ETH_SEPOLIA_WALLET_ADDRESS || undefined;
 
     // Create stream
     const stream = new ReadableStream({
