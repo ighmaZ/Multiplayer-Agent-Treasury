@@ -28,17 +28,52 @@ export interface CFORecommendation {
   details: string[];           // Bullet points explaining the decision
 }
 
+// Prepared transaction for MetaMask approval
+export interface PreparedTransaction {
+  chainId: number;
+  to: string;
+  data: string;
+  value: string;
+  description: string;
+}
+
+// Payment plan derived from Uniswap v4 SDK + balances
+export interface PaymentPlan {
+  status: 'READY' | 'INSUFFICIENT_FUNDS' | 'UNSUPPORTED_CURRENCY' | 'ERROR';
+  method: 'DIRECT_USDC_TRANSFER' | 'SWAP_EXACT_OUT';
+  chain: 'sepolia';
+  payerAddress: string;
+  recipientAddress: string;
+  invoiceAmountRaw: string;
+  invoiceAmountUSDC: string | null;
+  usdcBalance: string | null;
+  ethBalanceWei: string | null;
+  maxEthInWei: string | null;
+  slippageBps: number;
+  poolKey: {
+    currency0: string;
+    currency1: string;
+    fee: number;
+    tickSpacing: number;
+    hooks: string;
+  };
+  reason?: string;
+  preparedTransaction?: PreparedTransaction | null;
+  submittedTxHash?: string | null;
+}
+
 // Complete agent workflow state
 export interface AgentState {
   // Input
   pdfFile: File | null;
   
   // Processing
-  currentStep: 'idle' | 'extracting' | 'scanning' | 'analyzing' | 'complete';
+  currentStep: 'idle' | 'extracting' | 'scanning' | 'planning' | 'analyzing' | 'complete';
   
   // Results
   invoiceData: InvoiceData | null;
   securityScan: SecurityScan | null;
+  paymentPlan: PaymentPlan | null;
   recommendation: CFORecommendation | null;
   
   // Errors

@@ -5,6 +5,7 @@ import { StateGraph, START, END, Annotation } from '@langchain/langgraph';
 import { AgentState, createInitialState } from './state';
 import { pdfProcessorNode } from './nodes/pdfProcessor';
 import { walletScannerNode } from './nodes/walletScanner';
+import { paymentPlannerNode } from './nodes/paymentPlanner';
 import { cfoAssistantNode } from './nodes/cfoAssistant';
 
 // Define state annotation using LangGraph's Annotation API
@@ -17,6 +18,10 @@ const AgentStateAnnotation = Annotation.Root({
     value: (x, y) => y ?? x ?? '',
     default: () => '',
   }),
+  payerAddress: Annotation<string | null>({
+    value: (x, y) => y ?? x ?? null,
+    default: () => null,
+  }),
   currentStep: Annotation<string>({
     value: (x, y) => y ?? x ?? 'idle',
     default: () => 'idle',
@@ -26,6 +31,10 @@ const AgentStateAnnotation = Annotation.Root({
     default: () => null,
   }),
   securityScan: Annotation<any>({
+    value: (x, y) => y ?? x ?? null,
+    default: () => null,
+  }),
+  paymentPlan: Annotation<any>({
     value: (x, y) => y ?? x ?? null,
     default: () => null,
   }),
@@ -49,7 +58,8 @@ const AgentStateAnnotation = Annotation.Root({
  * Workflow:
  * 1. PDF Processor → Extract invoice data
  * 2. Wallet Scanner → Check wallet security
- * 3. CFO Assistant → Generate recommendation
+ * 3. Payment Planner → Build swap plan
+ * 4. CFO Assistant → Generate recommendation
  */
 export function createCFOAgentGraph() {
   // Define the state graph using Annotation with method chaining
@@ -61,12 +71,16 @@ export function createCFOAgentGraph() {
     .addNode('walletScanner', async (state: any) => {
       return await walletScannerNode(state);
     })
+    .addNode('paymentPlanner', async (state: any) => {
+      return await paymentPlannerNode(state);
+    })
     .addNode('cfoAssistant', async (state: any) => {
       return await cfoAssistantNode(state);
     })
     .addEdge(START, 'pdfProcessor')
     .addEdge('pdfProcessor', 'walletScanner')
-    .addEdge('walletScanner', 'cfoAssistant')
+    .addEdge('walletScanner', 'paymentPlanner')
+    .addEdge('paymentPlanner', 'cfoAssistant')
     .addEdge('cfoAssistant', END);
 
   // Compile the graph
@@ -81,7 +95,8 @@ export function createCFOAgentGraph() {
  */
 export async function runCFOAgent(
   pdfBuffer: Buffer,
-  fileName: string
+  fileName: string,
+  payerAddress?: string
 ): Promise<AgentState> {
   console.log('🚀 Starting CFO Agent Workflow...');
   console.log(`📄 File: ${fileName}`);
@@ -90,7 +105,7 @@ export async function runCFOAgent(
   const graph = createCFOAgentGraph();
   
   // Create initial state
-  const initialState = createInitialState(pdfBuffer, fileName);
+  const initialState = createInitialState(pdfBuffer, fileName, payerAddress);
   
   // Run the workflow
   const finalState = await graph.invoke(initialState);

@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
     // Parse the multipart form data
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const payerAddress = formData.get('payerAddress') as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     const pdfBuffer = Buffer.from(arrayBuffer);
 
     // Run the CFO agent workflow
-    const finalState = await runCFOAgent(pdfBuffer, file.name);
+    const finalState = await runCFOAgent(pdfBuffer, file.name, payerAddress || undefined);
 
     // Return the results
     return NextResponse.json({

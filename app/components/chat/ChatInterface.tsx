@@ -4,18 +4,20 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { FileUpload } from './FileUpload';
+import { Send, Plus, FileText } from 'lucide-react';
 import { MessageList } from './MessageList';
 import { AgentThinkingTrace } from './AgentThinkingTrace';
-import { Send, Plus, FileText } from 'lucide-react';
 import { useAgent } from '../AgentProvider';
 import { ThinkingLog } from '@/app/lib/agents/state';
+import { sepoliaMetaMaskConfig } from '@/app/lib/services/paymentPlanner';
 
 export function ChatInterface() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { state: agentState, setState: setAgentState, isLoading, setIsLoading } = useAgent();
   const [thinkingLogs, setThinkingLogs] = useState<ThinkingLog[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,8 +32,46 @@ export function ChatInterface() {
     }
   };
 
+  const ensureBaseSepolia = async (): Promise<void> => {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      throw new Error('MetaMask is required');
+    }
+
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+    if (chainId === sepoliaMetaMaskConfig.chainId) {
+      return;
+    }
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: sepoliaMetaMaskConfig.chainId }],
+      });
+    } catch {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [sepoliaMetaMaskConfig],
+      });
+    }
+  };
+
+  const connectWallet = async (): Promise<string | null> => {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      alert('MetaMask is required to continue');
+      return null;
+    }
+
+    await ensureBaseSepolia();
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
+    const address = Array.isArray(accounts) ? accounts[0] : null;
+    setWalletAddress(address);
+    return address;
+  };
+
   const handleSubmit = async () => {
     if (!selectedFile) return;
+    const connectedAddress = walletAddress || (await connectWallet());
+    if (!connectedAddress) return;
 
     // Clean up any existing connection
     if (eventSourceRef.current) {
@@ -46,6 +86,7 @@ export function ChatInterface() {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
+      formData.append('payerAddress', connectedAddress);
 
       // Use streaming API
       const response = await fetch('/api/agents/stream', {
@@ -122,13 +163,59 @@ export function ChatInterface() {
       setAgentState({
         pdfBuffer: null,
         fileName: selectedFile.name,
+        payerAddress: walletAddress,
         currentStep: 'error',
         invoiceData: null,
         securityScan: null,
+        paymentPlan: null,
         recommendation: null,
         logs: [],
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       });
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!agentState?.paymentPlan?.preparedTransaction || !walletAddress) {
+      return;
+    }
+
+    setIsApproving(true);
+    try {
+      if (typeof window === 'undefined' || !window.ethereum) {
+        throw new Error('MetaMask is required to approve transactions');
+      }
+
+      await ensureBaseSepolia();
+
+      const tx = {
+        from: walletAddress,
+        to: agentState.paymentPlan.preparedTransaction.to,
+        data: agentState.paymentPlan.preparedTransaction.data,
+        value: agentState.paymentPlan.preparedTransaction.value,
+      };
+
+      const hash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [tx],
+      }) as string;
+
+      setAgentState(prev =>
+        prev && prev.paymentPlan
+          ? {
+              ...prev,
+              paymentPlan: {
+                ...prev.paymentPlan,
+                submittedTxHash: hash as string,
+              },
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error('Approval failed:', error);
+      alert(error instanceof Error ? error.message : 'Approval failed');
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -161,7 +248,12 @@ export function ChatInterface() {
         {/* Results */}
         {agentState && agentState.currentStep === 'complete' && (
           <div className="max-w-2xl mx-auto">
-            <MessageList state={agentState} isLoading={isLoading} />
+            <MessageList
+              state={agentState}
+              isLoading={isLoading}
+              onApprove={handleApprove}
+              isApproving={isApproving}
+            />
           </div>
         )}
 
@@ -176,7 +268,7 @@ export function ChatInterface() {
       {/* Input Area */}
       <div className="bg-transparent p-2 md:p-4 mt-auto">
         <div className="mx-auto max-w-2xl">
-          <div className="relative flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-zinc-400 focus-within:ring-2 focus-within:ring-[#ccf437] transition-all">
+            <div className="relative flex items-center gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-zinc-400 focus-within:ring-2 focus-within:ring-[#ccf437] transition-all">
             {/* File Upload Trigger */}
             <div className="relative">
               <input
@@ -225,11 +317,17 @@ export function ChatInterface() {
             </button>
           </div>
           
-           {selectedFile && (
+              {selectedFile && (
               <div className="mt-2 flex items-center justify-center gap-3">
                  <span className="text-xs text-zinc-400">
                    {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                  </span>
+                 <button
+                   onClick={connectWallet}
+                   className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                 >
+                   {walletAddress ? `Wallet: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Connect MetaMask'}
+                 </button>
                  {(agentState || thinkingLogs.length > 0) && (
                    <button
                      onClick={clearAnalysis}

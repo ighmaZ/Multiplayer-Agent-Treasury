@@ -2,9 +2,12 @@
 // Streaming API route for real-time agent workflow with SSE
 
 import { NextRequest } from 'next/server';
-import { AgentState, createInitialState, ThinkingLog, createThinkingLog } from '@/app/lib/agents/state';
-import { extractInvoiceFromPDF, streamInvoiceExtraction, streamCFORecommendation } from '@/app/lib/services/geminiService';
+import { formatUnits } from 'viem';
+
+import { AgentState, createInitialState, createThinkingLog } from '@/app/lib/agents/state';
+import { streamInvoiceExtraction, streamCFORecommendation } from '@/app/lib/services/geminiService';
 import { scanWalletAddress } from '@/app/lib/services/etherscanService';
+import { buildPaymentPlan } from '@/app/lib/services/paymentPlanner';
 
 /**
  * Send SSE event through controller
@@ -221,7 +224,7 @@ async function walletScannerWithStream(
     return {
       ...state,
       securityScan,
-      currentStep: 'analyzing',
+      currentStep: 'planning',
     };
 
   } catch (error) {
@@ -242,6 +245,88 @@ async function walletScannerWithStream(
 }
 
 /**
+ * Payment Planner with streaming
+ */
+async function paymentPlannerWithStream(
+  state: AgentState,
+  controller: ReadableStreamDefaultController
+): Promise<AgentState> {
+  console.log('💳 Payment Planner Node: Building swap plan...');
+
+  try {
+    if (!state.invoiceData) {
+      throw new Error('No invoice data available for payment planning');
+    }
+    if (!state.payerAddress) {
+      throw new Error('No payer wallet address provided for payment planning');
+    }
+
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'paymentPlan',
+      'thinking',
+      'Fetching wallet balances and Uniswap v4 quotes...',
+      { progress: 15 }
+    ));
+
+    const paymentPlan = await buildPaymentPlan(state.invoiceData, state.payerAddress);
+
+    const usdcBalance = paymentPlan.usdcBalance
+      ? formatUnits(BigInt(paymentPlan.usdcBalance), 6)
+      : '0';
+    const ethBalance = paymentPlan.ethBalanceWei
+      ? formatUnits(BigInt(paymentPlan.ethBalanceWei), 18)
+      : '0';
+
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'paymentPlan',
+      'processing',
+      `Plan ready: ${paymentPlan.method} (${paymentPlan.status}). USDC: ${usdcBalance}, ETH: ${ethBalance}.`,
+      {
+        progress: 75,
+        details: [
+          `Method: ${paymentPlan.method}`,
+          `Status: ${paymentPlan.status}`,
+          `USDC Balance: ${usdcBalance}`,
+          `ETH Balance: ${ethBalance}`,
+          paymentPlan.maxEthInWei ? `Max ETH In: ${formatUnits(BigInt(paymentPlan.maxEthInWei), 18)}` : '',
+          paymentPlan.reason ? `Reason: ${paymentPlan.reason}` : '',
+        ].filter(Boolean),
+        data: paymentPlan,
+      }
+    ));
+
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'paymentPlan',
+      'success',
+      `Payment plan prepared: ${paymentPlan.method}`,
+      { progress: 100, data: paymentPlan }
+    ));
+
+    console.log('✅ Payment Planner Node: Completed');
+
+    return {
+      ...state,
+      paymentPlan,
+      currentStep: 'analyzing',
+    };
+  } catch (error) {
+    console.error('❌ Payment Planner Node Error:', error);
+
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'paymentPlan',
+      'error',
+      `Payment planning failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    ));
+
+    return {
+      ...state,
+      currentStep: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
  * CFO Assistant with REAL LLM streaming
  */
 async function cfoAssistantWithStream(
@@ -251,7 +336,7 @@ async function cfoAssistantWithStream(
   console.log('🤖 CFO Assistant Node: Starting real LLM streaming analysis...');
 
   try {
-    if (!state.invoiceData || !state.securityScan) {
+    if (!state.invoiceData || !state.securityScan || !state.paymentPlan) {
       throw new Error('Missing required data for analysis');
     }
 
@@ -277,7 +362,8 @@ async function cfoAssistantWithStream(
         isContract: state.securityScan.isContract,
         isVerified: state.securityScan.isVerified,
         warnings: state.securityScan.warnings,
-      }
+      },
+      state.paymentPlan
     )) {
       if (chunk.type === 'reasoning') {
         accumulatedReasoning += chunk.content;
@@ -383,12 +469,20 @@ export async function POST(request: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const pdfBuffer = Buffer.from(arrayBuffer);
+    const payerAddress = formData.get('payerAddress') as string | null;
+
+    if (!payerAddress) {
+      return new Response(
+        JSON.stringify({ error: 'Payer wallet address is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Create stream
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          let state = createInitialState(pdfBuffer, file.name);
+          let state = createInitialState(pdfBuffer, file.name, payerAddress);
 
           // Run workflow with streaming
           state = await pdfProcessorWithStream(state, controller);
@@ -407,10 +501,20 @@ export async function POST(request: NextRequest) {
             return;
           }
 
+          state = await paymentPlannerWithStream(state, controller);
+
+          if (state.currentStep === 'error') {
+            sendEvent(controller, 'error', { error: state.error });
+            controller.close();
+            return;
+          }
+
           state = await cfoAssistantWithStream(state, controller);
 
           if (state.currentStep === 'error') {
             sendEvent(controller, 'error', { error: state.error });
+            controller.close();
+            return;
           }
 
         } catch (error) {

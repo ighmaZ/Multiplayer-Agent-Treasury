@@ -2,7 +2,7 @@
 // Google Gemini integration for PDF invoice extraction
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { InvoiceData } from '@/app/types';
+import { InvoiceData, PaymentPlan } from '@/app/types';
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 
@@ -122,7 +122,8 @@ export async function generateCFORecommendation(
     isContract: boolean;
     isVerified: boolean;
     warnings: string[];
-  }
+  },
+  paymentPlan?: PaymentPlan | null
 ): Promise<{
   recommendation: 'APPROVE' | 'REVIEW' | 'REJECT';
   summary: string;
@@ -135,6 +136,20 @@ export async function generateCFORecommendation(
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.0-flash-exp',
     });
+
+    const paymentContext = paymentPlan
+      ? `
+      PAYMENT PLAN:
+      - Payer: ${paymentPlan.payerAddress}
+      - Method: ${paymentPlan.method}
+      - Status: ${paymentPlan.status}
+      - Invoice Amount (USDC base units): ${paymentPlan.invoiceAmountUSDC ?? 'N/A'}
+      - USDC Balance: ${paymentPlan.usdcBalance ?? 'N/A'}
+      - ETH Balance (wei): ${paymentPlan.ethBalanceWei ?? 'N/A'}
+      - Max ETH In (wei): ${paymentPlan.maxEthInWei ?? 'N/A'}
+      - Reason: ${paymentPlan.reason ?? 'N/A'}
+      `
+      : '';
 
     const prompt = `
       You are a CFO assistant analyzing a payment request.
@@ -151,6 +166,8 @@ export async function generateCFORecommendation(
       - Contract Verified: ${securityScan.isVerified ? 'Yes' : 'No'}
       - Warnings: ${securityScan.warnings.join(', ') || 'None'}
       
+      ${paymentContext}
+
       RISK THRESHOLDS:
       - 0-39: LOW risk (APPROVE)
       - 40-69: MEDIUM risk (REVIEW)
@@ -315,13 +332,18 @@ export async function* streamCFORecommendation(
     isContract: boolean;
     isVerified: boolean;
     warnings: string[];
-  }
+  },
+  paymentPlan?: PaymentPlan | null
 ): AsyncGenerator<{ type: 'reasoning' | 'result'; content: string | CFORecommendation }> {
   console.log('🤖 Streaming CFO recommendation...');
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.0-flash',
   });
+
+  const paymentContext = paymentPlan
+    ? `\nPAYMENT PLAN:\n- Payer: ${paymentPlan.payerAddress}\n- Method: ${paymentPlan.method}\n- Status: ${paymentPlan.status}\n- Invoice Amount (USDC base units): ${paymentPlan.invoiceAmountUSDC ?? 'N/A'}\n- USDC Balance: ${paymentPlan.usdcBalance ?? 'N/A'}\n- ETH Balance (wei): ${paymentPlan.ethBalanceWei ?? 'N/A'}\n- Max ETH In (wei): ${paymentPlan.maxEthInWei ?? 'N/A'}\n- Reason: ${paymentPlan.reason ?? 'N/A'}\n`
+    : '';
 
   const streamingPrompt = `You are a CFO assistant making a payment decision.
 
@@ -336,6 +358,7 @@ SECURITY SCAN RESULTS:
 - Is Smart Contract: ${securityScan.isContract ? 'Yes' : 'No'}
 - Contract Verified: ${securityScan.isVerified ? 'Yes' : 'No'}
 - Warnings: ${securityScan.warnings.length > 0 ? securityScan.warnings.join(', ') : 'None'}
+${paymentContext}
 
 DECISION THRESHOLDS:
 - 0-39: LOW risk → APPROVE

@@ -1,7 +1,7 @@
 // lib/agents/state.ts
 // LangGraph agent state definition
 
-import { InvoiceData, SecurityScan, CFORecommendation } from '@/app/types';
+import { InvoiceData, SecurityScan, CFORecommendation, PaymentPlan } from '@/app/types';
 
 /**
  * Agent state that flows through the LangGraph workflow
@@ -11,13 +11,15 @@ export interface AgentState {
   // Input
   pdfBuffer: Buffer | null;
   fileName: string;
+  payerAddress: string | null;
   
   // Processing status for visualization
-  currentStep: 'idle' | 'extracting' | 'scanning' | 'analyzing' | 'complete' | 'error';
+  currentStep: 'idle' | 'extracting' | 'scanning' | 'planning' | 'analyzing' | 'complete' | 'error';
   
   // Results from each agent
   invoiceData: InvoiceData | null;
   securityScan: SecurityScan | null;
+  paymentPlan: PaymentPlan | null;
   recommendation: CFORecommendation | null;
   
   // Trace logs for visualization
@@ -43,10 +45,10 @@ export interface AgentLog {
  */
 export interface ThinkingLog {
   id: string;
-  step: 'pdfProcessor' | 'walletScanner' | 'cfoAssistant' | 'complete';
+  step: 'pdfProcessor' | 'walletScanner' | 'paymentPlan' | 'cfoAssistant' | 'complete';
   status: 'pending' | 'thinking' | 'processing' | 'success' | 'error';
   title: string;
-  icon: 'file' | 'shield' | 'brain' | 'check';
+  icon: 'file' | 'shield' | 'wallet' | 'brain' | 'check';
   reasoning: string;
   details?: string[];
   progress?: number;
@@ -57,13 +59,15 @@ export interface ThinkingLog {
 /**
  * Initial state factory
  */
-export function createInitialState(pdfBuffer: Buffer, fileName: string): AgentState {
+export function createInitialState(pdfBuffer: Buffer, fileName: string, payerAddress?: string): AgentState {
   return {
     pdfBuffer,
     fileName,
+    payerAddress: payerAddress ?? null,
     currentStep: 'idle',
     invoiceData: null,
     securityScan: null,
+    paymentPlan: null,
     recommendation: null,
     logs: [],
     error: null,
@@ -113,6 +117,7 @@ export function createThinkingLog(
   const stepConfig = {
     pdfProcessor: { title: 'Extracting Invoice Data', icon: 'file' as const },
     walletScanner: { title: 'Scanning Wallet Security', icon: 'shield' as const },
+    paymentPlan: { title: 'Preparing Payment Plan', icon: 'wallet' as const },
     cfoAssistant: { title: 'Analyzing with CFO Assistant', icon: 'brain' as const },
     complete: { title: 'Analysis Complete', icon: 'check' as const },
   };

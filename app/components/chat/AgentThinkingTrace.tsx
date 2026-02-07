@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, ShieldCheck, Brain, CheckCircle2, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { FileText, ShieldCheck, Brain, CheckCircle2, ChevronDown, ChevronRight, Loader2, Wallet } from 'lucide-react';
 import { ThinkingLog } from '@/app/lib/agents/state';
 
 interface AgentThinkingTraceProps {
@@ -71,6 +71,7 @@ function StepIcon({ icon, status }: { icon: ThinkingLog['icon']; status: Thinkin
   const iconMap = {
     file: FileText,
     shield: ShieldCheck,
+    wallet: Wallet,
     brain: Brain,
     check: CheckCircle2,
   };
@@ -225,7 +226,7 @@ function LogEntry({ log, isLatest, isExpanded, onToggle, isTyping }: LogEntryPro
 function SummaryLine({ logs, isStreaming, onExpand }: { logs: ThinkingLog[]; isStreaming: boolean; onExpand: () => void }) {
   const latestLog = logs[logs.length - 1];
   const completedSteps = logs.filter(l => l.status === 'success').length;
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   if (!latestLog) return null;
 

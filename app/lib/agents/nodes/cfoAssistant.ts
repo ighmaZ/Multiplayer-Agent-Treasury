@@ -28,6 +28,9 @@ export async function cfoAssistantNode(state: AgentState): Promise<AgentState> {
     if (!state.securityScan) {
       throw new Error('No security scan data available for analysis');
     }
+    if (!state.paymentPlan) {
+      throw new Error('No payment plan available for analysis');
+    }
     
     // Generate recommendation using Gemini
     const recommendation = await generateCFORecommendation(
@@ -37,7 +40,8 @@ export async function cfoAssistantNode(state: AgentState): Promise<AgentState> {
         isContract: state.securityScan.isContract,
         isVerified: state.securityScan.isVerified,
         warnings: state.securityScan.warnings,
-      }
+      },
+      state.paymentPlan
     );
     
     // Update state with recommendation

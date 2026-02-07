@@ -3,15 +3,27 @@
 
 'use client';
 
+import { formatUnits } from 'viem';
+import { FileText, Shield, Brain, AlertTriangle, CheckCircle, XCircle, HelpCircle, Wallet } from 'lucide-react';
 import { AgentState } from '@/app/lib/agents/state';
-import { FileText, Shield, Brain, AlertTriangle, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 
 interface MessageListProps {
   state: AgentState | null;
   isLoading: boolean;
+  onApprove?: () => void;
+  isApproving?: boolean;
 }
 
-export function MessageList({ state, isLoading }: MessageListProps) {
+function formatTokenAmount(value: string | null | undefined, decimals: number, symbol: string) {
+  if (!value) return 'N/A';
+  try {
+    return `${formatUnits(BigInt(value), decimals)} ${symbol}`;
+  } catch {
+    return `${value} ${symbol}`;
+  }
+}
+
+export function MessageList({ state, isLoading, onApprove, isApproving }: MessageListProps) {
   if (!state && !isLoading) {
     return (
       <div className="flex h-full items-center justify-center text-zinc-400">
@@ -125,6 +137,128 @@ export function MessageList({ state, isLoading }: MessageListProps) {
         </div>
       )}
 
+      {/* Payment Plan */}
+      {state?.paymentPlan && (
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 border-b border-zinc-100 pb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600">
+              <Wallet className="h-4 w-4" />
+            </div>
+            <span className="font-semibold text-zinc-900">
+              Payment Plan
+            </span>
+          </div>
+
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Method</span>
+              <span className="font-semibold text-zinc-900">
+                {state.paymentPlan.method === 'DIRECT_USDC_TRANSFER'
+                  ? 'Direct USDC Transfer'
+                  : 'Swap ETH → USDC (Exact Output)'}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Status</span>
+              <span className={`font-semibold ${
+                state.paymentPlan.status === 'READY'
+                  ? 'text-green-700'
+                  : state.paymentPlan.status === 'INSUFFICIENT_FUNDS'
+                  ? 'text-amber-700'
+                  : 'text-red-700'
+              }`}>
+                {state.paymentPlan.status}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Invoice Amount</span>
+              <span className="text-zinc-700">
+                {state.paymentPlan.invoiceAmountUSDC
+                  ? formatTokenAmount(state.paymentPlan.invoiceAmountUSDC, 6, 'USDC')
+                  : state.invoiceData?.amount}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Slippage</span>
+              <span className="text-zinc-700">
+                {(state.paymentPlan.slippageBps / 100).toFixed(2)}%
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">USDC Balance</span>
+              <span className="text-zinc-700">
+                {formatTokenAmount(state.paymentPlan.usdcBalance, 6, 'USDC')}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">ETH Balance</span>
+              <span className="text-zinc-700">
+                {formatTokenAmount(state.paymentPlan.ethBalanceWei, 18, 'ETH')}
+              </span>
+            </div>
+            {state.paymentPlan.maxEthInWei && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Max ETH In</span>
+                <span className="text-zinc-700">
+                  {formatTokenAmount(state.paymentPlan.maxEthInWei, 18, 'ETH')}
+                </span>
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Recipient</span>
+              <code className="rounded bg-zinc-50 px-2 py-1 text-xs text-zinc-600 border border-zinc-100 font-mono">
+                {state.paymentPlan.recipientAddress.slice(0, 10)}...{state.paymentPlan.recipientAddress.slice(-8)}
+              </code>
+            </div>
+          </div>
+
+          {state.paymentPlan.reason && (
+            <div className="mt-4 rounded-lg bg-amber-50 p-3 border border-amber-100">
+              <div className="text-xs text-amber-800">
+                {state.paymentPlan.reason}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-col gap-3">
+            {state.paymentPlan.preparedTransaction && (
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-3 text-xs text-zinc-600">
+                <div className="mb-1 font-medium text-zinc-700">Prepared Transaction</div>
+                <div className="flex flex-col gap-1">
+                  <div>To: {state.paymentPlan.preparedTransaction.to}</div>
+                  <div>Value: {formatTokenAmount(state.paymentPlan.preparedTransaction.value, 18, 'ETH')}</div>
+                  <div>Purpose: {state.paymentPlan.preparedTransaction.description}</div>
+                </div>
+              </div>
+            )}
+
+            {state.paymentPlan.status === 'READY' && state.paymentPlan.preparedTransaction && onApprove && (
+              <button
+                onClick={onApprove}
+                disabled={isApproving || Boolean(state.paymentPlan.submittedTxHash)}
+                className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  isApproving || state.paymentPlan.submittedTxHash
+                    ? 'bg-zinc-200 text-zinc-500'
+                    : 'bg-black text-white hover:bg-zinc-800'
+                }`}
+              >
+                {state.paymentPlan.submittedTxHash
+                  ? 'Transaction Submitted'
+                  : isApproving
+                  ? 'Awaiting MetaMask...'
+                  : 'Approve & Pay in MetaMask'}
+              </button>
+            )}
+
+            {state.paymentPlan.submittedTxHash && (
+              <div className="text-xs text-zinc-500">
+                Submitted Tx: {state.paymentPlan.submittedTxHash.slice(0, 10)}...{state.paymentPlan.submittedTxHash.slice(-8)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* CFO Recommendation */}
       {state?.recommendation && (
         <div
@@ -209,4 +343,3 @@ export function MessageList({ state, isLoading }: MessageListProps) {
     </div>
   );
 }
-

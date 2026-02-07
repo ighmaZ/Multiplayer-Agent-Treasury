@@ -8,7 +8,7 @@ import { AgentState } from '@/app/lib/agents/state';
 
 interface AgentContextType {
   state: AgentState | null;
-  setState: (state: AgentState | null) => void;
+  setState: React.Dispatch<React.SetStateAction<AgentState | null>>;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
 }

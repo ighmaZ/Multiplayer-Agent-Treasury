@@ -34,7 +34,7 @@ export async function walletScannerNode(state: AgentState): Promise<AgentState> 
     updatedState = {
       ...updatedState,
       securityScan,
-      currentStep: 'analyzing',
+      currentStep: 'planning',
     };
     
     // Add success log with risk info
