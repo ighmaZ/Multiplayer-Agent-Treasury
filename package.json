@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@circle-fin/adapter-circle-wallets": "^1.1.1",
+    "@circle-fin/bridge-kit": "^1.5.0",
     "@circle-fin/developer-controlled-wallets": "^10.1.0",
     "@google/generative-ai": "^0.24.1",
     "@langchain/core": "^1.1.19",
