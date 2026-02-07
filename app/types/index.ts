@@ -62,20 +62,52 @@ export interface PaymentPlan {
   submittedTxHash?: string | null;
 }
 
+// Treasury Manager execution step
+export interface ExecutionStep {
+  id: string;
+  name: string;
+  description: string;
+  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+  txHash?: string;
+  error?: string;
+}
+
+// Treasury Manager plan (Agent 2 output)
+export interface TreasuryPlan {
+  invoiceAmount: string;
+  invoiceCurrency: string;
+  recipientAddress: string;
+  arcBalance: string;
+  arcSufficient: boolean;
+  deficit: string;
+  sepoliaEthBalance: string;
+  sepoliaUsdcBalance: string;
+  swapNeeded: boolean;
+  swapQuoteEth: string | null;
+  bridgeNeeded: boolean;
+  bridgeAmount: string | null;
+  steps: ExecutionStep[];
+  canExecute: boolean;
+  reason?: string;
+}
+
 // Complete agent workflow state
 export interface AgentState {
   // Input
   pdfFile: File | null;
-  
+
   // Processing
-  currentStep: 'idle' | 'extracting' | 'scanning' | 'planning' | 'analyzing' | 'complete';
-  
-  // Results
+  currentStep: 'idle' | 'extracting' | 'scanning' | 'planning' | 'analyzing' | 'treasury' | 'complete';
+
+  // Agent 1 Results
   invoiceData: InvoiceData | null;
   securityScan: SecurityScan | null;
   paymentPlan: PaymentPlan | null;
   recommendation: CFORecommendation | null;
-  
+
+  // Agent 2 Results
+  treasuryPlan: TreasuryPlan | null;
+
   // Errors
   error: string | null;
 }

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, memo, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, ShieldCheck, Brain, CheckCircle2, ChevronDown, ChevronUp, Wallet } from 'lucide-react';
+import { FileText, ShieldCheck, Brain, CheckCircle2, ChevronDown, ChevronUp, Wallet, Landmark } from 'lucide-react';
 import { ThinkingLog } from '@/app/lib/agents/state';
 
 interface AgentThinkingTraceProps {
@@ -27,6 +27,7 @@ const StepIcon = memo(function StepIcon({
     shield: ShieldCheck,
     wallet: Wallet,
     brain: Brain,
+    vault: Landmark,
     check: CheckCircle2,
   };
 
@@ -169,10 +170,21 @@ const ThinkingStep = memo(function ThinkingStep({
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
+            {log.agent && (
+              <span className={`
+                inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
+                ${log.agent === 'treasury'
+                  ? 'bg-violet-100 text-violet-700'
+                  : 'bg-zinc-100 text-zinc-500'
+                }
+              `}>
+                {log.agent === 'treasury' ? 'Agent 2' : 'Agent 1'}
+              </span>
+            )}
             <span className="font-semibold text-zinc-900 text-sm">
               {log.title}
             </span>
-            
+
             {/* Status badge */}
             {isActive && (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-[#ccf437]/30 text-zinc-700">
@@ -313,7 +325,7 @@ const CollapsedSummary = memo(function CollapsedSummary({
           <motion.div
             className={`h-full rounded-full ${hasError ? 'bg-red-400' : isStreaming ? 'bg-[#ccf437]' : 'bg-green-500'}`}
             initial={{ width: 0 }}
-            animate={{ width: `${(completedCount / 4) * 100}%` }}
+            animate={{ width: `${logs.length > 0 ? (completedCount / logs.length) * 100 : 0}%` }}
             transition={{ duration: 0.3 }}
           />
         </div>
@@ -409,7 +421,7 @@ export function AgentThinkingTrace({ logs, isStreaming }: AgentThinkingTraceProp
                 
                 <div>
                   <span className="font-semibold text-zinc-900 text-sm">AI Agent Reasoning</span>
-                  <span className="ml-2 text-xs text-zinc-400">{completedCount}/4 steps</span>
+                  <span className="ml-2 text-xs text-zinc-400">{completedCount}/{logs.length} steps</span>
                 </div>
               </div>
 

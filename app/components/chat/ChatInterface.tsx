@@ -10,6 +10,7 @@ import { MessageList } from './MessageList';
 import { AgentThinkingTrace } from './AgentThinkingTrace';
 import { useAgent } from '../AgentProvider';
 import { ThinkingLog } from '@/app/lib/agents/state';
+import { ExecutionStep } from '@/app/lib/services/treasuryManager';
 
 export function ChatInterface(): React.JSX.Element {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -22,6 +23,9 @@ export function ChatInterface(): React.JSX.Element {
   const [thinkingLogs, setThinkingLogs] = useState<ThinkingLog[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionDone, setExecutionDone] = useState(false);
+  const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
   const showToast = useCallback((message: string): void => {
     toast(message, {
@@ -141,6 +145,7 @@ export function ChatInterface(): React.JSX.Element {
         securityScan: null,
         paymentPlan: null,
         recommendation: null,
+        treasuryPlan: null,
         logs: [],
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       });
@@ -148,43 +153,84 @@ export function ChatInterface(): React.JSX.Element {
   };
 
   const handleApprove = async () => {
-    if (!agentState?.paymentPlan?.preparedTransaction) return;
+    if (!agentState?.treasuryPlan?.canExecute) return;
 
     setIsApproving(true);
+    setIsExecuting(true);
+    // Initialize execution steps from the plan
+    setExecutionSteps(agentState.treasuryPlan.steps.map(s => ({ ...s })));
+
     try {
       const response = await fetch('/api/treasury/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletId: agentState.paymentPlan.method === 'SWAP_EXACT_OUT'
-            ? process.env.NEXT_PUBLIC_CIRCLE_ETH_SEPOLIA_WALLET_ID
-            : process.env.NEXT_PUBLIC_CIRCLE_ARC_WALLET_ID,
-          contractAddress: agentState.paymentPlan.preparedTransaction.to,
-          callData: agentState.paymentPlan.preparedTransaction.data,
-          amount: agentState.paymentPlan.preparedTransaction.value,
-        }),
+        body: JSON.stringify({ treasuryPlan: agentState.treasuryPlan }),
       });
 
-      const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Transaction failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Execution failed');
       }
 
-      setAgentState(prev =>
-        prev && prev.paymentPlan
-          ? {
-              ...prev,
-              paymentPlan: {
-                ...prev.paymentPlan,
-                submittedTxHash: result.txHash || result.transactionId,
-              },
+      // Handle SSE streaming of execution progress
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Failed to read execution stream');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.trim().startsWith('event: ')) {
+            const eventType = line.replace('event: ', '').split('\n')[0];
+            const dataMatch = line.match(/data: (.+)/);
+
+            if (dataMatch) {
+              try {
+                const data = JSON.parse(dataMatch[1]);
+
+                switch (eventType) {
+                  case 'step_update':
+                    setExecutionSteps(prev =>
+                      prev.map(s =>
+                        s.id === data.stepId
+                          ? { ...s, ...data }
+                          : s
+                      )
+                    );
+                    break;
+
+                  case 'execution_complete':
+                    showToast('Payment executed successfully');
+                    setIsExecuting(false);
+                    setExecutionDone(true);
+                    break;
+
+                  case 'execution_error':
+                    throw new Error(data.error || 'Execution failed');
+                }
+              } catch (e) {
+                if (e instanceof Error && e.message !== 'Execution failed') {
+                  console.error('Failed to parse execution SSE:', e);
+                } else {
+                  throw e;
+                }
+              }
             }
-          : prev
-      );
-      showToast('Transaction submitted successfully');
+          }
+        }
+      }
     } catch (error) {
-      console.error('Approval failed:', error);
-      alert(error instanceof Error ? error.message : 'Approval failed');
+      console.error('Execution failed:', error);
+      showToast(error instanceof Error ? error.message : 'Execution failed');
+      setIsExecuting(false);
     } finally {
       setIsApproving(false);
     }
@@ -200,6 +246,9 @@ export function ChatInterface(): React.JSX.Element {
     setThinkingLogs([]);
     setIsStreaming(false);
     setIsLoading(false);
+    setExecutionSteps([]);
+    setIsExecuting(false);
+    setExecutionDone(false);
   }, [setAgentState, setIsLoading]);
 
   return (
@@ -224,6 +273,9 @@ export function ChatInterface(): React.JSX.Element {
               isLoading={isLoading}
               onApprove={handleApprove}
               isApproving={isApproving}
+              executionSteps={executionSteps.length > 0 ? executionSteps : undefined}
+              isExecuting={isExecuting}
+              executionDone={executionDone}
             />
           </div>
         )}

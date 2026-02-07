@@ -25,6 +25,9 @@ for (const w of WALLETS_CONFIG) {
   WALLET_LABELS[w.id] = w.name;
 }
 
+// Circle token ID → symbol mapping (built from balance queries)
+const TOKEN_ID_TO_SYMBOL: Record<string, string> = {};
+
 // DIA Oracle API — fetch live USD prices for tokens
 const DIA_API_BASE = 'https://api.diadata.org/v1/quotation';
 
@@ -99,6 +102,15 @@ export async function GET() {
 
     const balancesByWallet = [ethSepoliaBalances, arcBalances];
 
+    // Build token ID → symbol mapping from balance data
+    for (const balances of balancesByWallet) {
+      for (const b of balances as any[]) {
+        if (b.token?.id && b.token?.symbol) {
+          TOKEN_ID_TO_SYMBOL[b.token.id] = b.token.symbol;
+        }
+      }
+    }
+
     // Build wallet data
     const wallets: WalletData[] = WALLETS_CONFIG.map((config, i) => {
       const rawBalances = balancesByWallet[i] || [];
@@ -123,22 +135,32 @@ export async function GET() {
       };
     });
 
-    // Build transactions
-    const txList: TreasuryTransaction[] = (transactions || []).map((tx: any) => ({
-      id: tx.id,
-      txHash: tx.txHash || null,
-      state: tx.state || 'UNKNOWN',
-      txType: tx.transactionType || 'UNKNOWN',
-      operation: tx.operation || 'TRANSFER',
-      amount: tx.amounts?.[0] || '0',
-      token: tx.tokenId || '',
-      sourceAddress: tx.sourceAddress || '',
-      destinationAddress: tx.destinationAddress || '',
-      createDate: tx.createDate || '',
-      blockchain: tx.blockchain || '',
-      walletName: WALLET_LABELS[tx.walletId] || tx.walletId || '',
-      networkFee: tx.networkFee || null,
-    }));
+    // Build transactions — resolve token IDs to symbols
+    const txList: TreasuryTransaction[] = (transactions || []).map((tx: any) => {
+      // Resolve token symbol from tokenId
+      const tokenSymbol = tx.tokenId
+        ? (TOKEN_ID_TO_SYMBOL[tx.tokenId] || tx.tokenId)
+        : (tx.operation === 'CONTRACT_EXECUTION' ? 'ETH' : '');
+
+      // Amount: use amounts[] array first, fall back to singular amount
+      const amount = tx.amounts?.[0] || tx.amount || '0';
+
+      return {
+        id: tx.id,
+        txHash: tx.txHash || null,
+        state: tx.state || 'UNKNOWN',
+        txType: tx.transactionType || 'UNKNOWN',
+        operation: tx.operation || 'TRANSFER',
+        amount,
+        token: tokenSymbol,
+        sourceAddress: tx.sourceAddress || '',
+        destinationAddress: tx.destinationAddress || '',
+        createDate: tx.createDate || '',
+        blockchain: tx.blockchain || '',
+        walletName: WALLET_LABELS[tx.walletId] || tx.walletId || '',
+        networkFee: tx.networkFee || null,
+      };
+    });
 
     // Aggregate stats
     const totalValueUsd = wallets.reduce((sum, w) => sum + w.totalValueUsd, 0);

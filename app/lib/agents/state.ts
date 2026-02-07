@@ -1,7 +1,7 @@
 // lib/agents/state.ts
 // LangGraph agent state definition
 
-import { InvoiceData, SecurityScan, CFORecommendation, PaymentPlan } from '@/app/types';
+import { InvoiceData, SecurityScan, CFORecommendation, PaymentPlan, TreasuryPlan } from '@/app/types';
 
 /**
  * Agent state that flows through the LangGraph workflow
@@ -14,13 +14,16 @@ export interface AgentState {
   payerAddress: string | null;
   
   // Processing status for visualization
-  currentStep: 'idle' | 'extracting' | 'scanning' | 'planning' | 'analyzing' | 'complete' | 'error';
-  
-  // Results from each agent
+  currentStep: 'idle' | 'extracting' | 'scanning' | 'planning' | 'analyzing' | 'treasury' | 'complete' | 'error';
+
+  // Agent 1 (Invoice Analyst) results
   invoiceData: InvoiceData | null;
   securityScan: SecurityScan | null;
   paymentPlan: PaymentPlan | null;
   recommendation: CFORecommendation | null;
+
+  // Agent 2 (Treasury Manager) results
+  treasuryPlan: TreasuryPlan | null;
   
   // Trace logs for visualization
   logs: AgentLog[];
@@ -45,10 +48,11 @@ export interface AgentLog {
  */
 export interface ThinkingLog {
   id: string;
-  step: 'pdfProcessor' | 'walletScanner' | 'paymentPlan' | 'cfoAssistant' | 'complete';
+  step: 'pdfProcessor' | 'walletScanner' | 'paymentPlan' | 'cfoAssistant' | 'treasuryManager' | 'complete';
+  agent?: 'analyst' | 'treasury';
   status: 'pending' | 'thinking' | 'processing' | 'success' | 'error';
   title: string;
-  icon: 'file' | 'shield' | 'wallet' | 'brain' | 'check';
+  icon: 'file' | 'shield' | 'wallet' | 'brain' | 'vault' | 'check';
   reasoning: string;
   details?: string[];
   progress?: number;
@@ -69,6 +73,7 @@ export function createInitialState(pdfBuffer: Buffer, fileName: string, payerAdd
     securityScan: null,
     paymentPlan: null,
     recommendation: null,
+    treasuryPlan: null,
     logs: [],
     error: null,
   };
@@ -115,11 +120,12 @@ export function createThinkingLog(
   }
 ): ThinkingLog {
   const stepConfig = {
-    pdfProcessor: { title: 'Extracting Invoice Data', icon: 'file' as const },
-    walletScanner: { title: 'Scanning Wallet Security', icon: 'shield' as const },
-    paymentPlan: { title: 'Preparing Payment Plan', icon: 'wallet' as const },
-    cfoAssistant: { title: 'Analyzing with CFO Assistant', icon: 'brain' as const },
-    complete: { title: 'Analysis Complete', icon: 'check' as const },
+    pdfProcessor: { title: 'Extracting Invoice Data', icon: 'file' as const, agent: 'analyst' as const },
+    walletScanner: { title: 'Scanning Wallet Security', icon: 'shield' as const, agent: 'analyst' as const },
+    paymentPlan: { title: 'Preparing Payment Plan', icon: 'wallet' as const, agent: 'analyst' as const },
+    cfoAssistant: { title: 'Analyzing with CFO Assistant', icon: 'brain' as const, agent: 'analyst' as const },
+    treasuryManager: { title: 'Treasury Manager', icon: 'vault' as const, agent: 'treasury' as const },
+    complete: { title: 'Analysis Complete', icon: 'check' as const, agent: 'analyst' as const },
   };
 
   const config = stepConfig[step];
@@ -127,6 +133,7 @@ export function createThinkingLog(
   return {
     id: `${step}-${Date.now()}`,
     step,
+    agent: config.agent,
     status,
     title: options?.title || config.title,
     icon: options?.icon || config.icon,

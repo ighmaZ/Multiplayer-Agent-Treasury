@@ -8,6 +8,7 @@ import { AgentState, createInitialState, createThinkingLog } from '@/app/lib/age
 import { streamInvoiceExtraction, streamCFORecommendation } from '@/app/lib/services/geminiService';
 import { scanWalletAddress } from '@/app/lib/services/etherscanService';
 import { buildPaymentPlan } from '@/app/lib/services/paymentPlanner';
+import { buildTreasuryPlan } from '@/app/lib/services/treasuryManager';
 
 /**
  * Send SSE event through controller
@@ -405,19 +406,12 @@ async function cfoAssistantWithStream(
       }
     ));
 
-    // Send complete event
-    sendEvent(controller, 'complete', {
-      ...state,
-      recommendation,
-      currentStep: 'complete',
-    });
-
     console.log('✅ CFO Assistant Node: Recommendation generated');
 
     return {
       ...state,
       recommendation,
-      currentStep: 'complete',
+      currentStep: recommendation.recommendation === 'APPROVE' ? 'treasury' : 'complete',
     };
 
   } catch (error) {
@@ -427,6 +421,125 @@ async function cfoAssistantWithStream(
       'cfoAssistant',
       'error',
       `Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    ));
+
+    return {
+      ...state,
+      currentStep: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Treasury Manager (Agent 2) with streaming
+ * Only runs if CFO recommends APPROVE
+ */
+async function treasuryManagerWithStream(
+  state: AgentState,
+  controller: ReadableStreamDefaultController
+): Promise<AgentState> {
+  console.log('🏦 Treasury Manager: Checking balances and building execution plan...');
+
+  try {
+    if (!state.invoiceData) {
+      throw new Error('No invoice data for treasury planning');
+    }
+
+    // Agent 2 introduces itself
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'treasuryManager',
+      'thinking',
+      'Invoice approved. Let me check our treasury wallets to see if we have enough funds to cover this payment...',
+      { progress: 10 }
+    ));
+
+    await new Promise(r => setTimeout(r, 800));
+
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'treasuryManager',
+      'processing',
+      'Checking USDC and EURC balances on Arc Testnet (our settlement chain)...',
+      { progress: 30 }
+    ));
+
+    const treasuryPlan = await buildTreasuryPlan(state.invoiceData);
+
+    await new Promise(r => setTimeout(r, 500));
+
+    if (treasuryPlan.arcSufficient) {
+      sendEvent(controller, 'thinking', createThinkingLog(
+        'treasuryManager',
+        'processing',
+        `We have ${treasuryPlan.arcBalance} ${treasuryPlan.invoiceCurrency} on Arc — enough to cover the ${treasuryPlan.invoiceAmount} ${treasuryPlan.invoiceCurrency} invoice. Ready for direct transfer.`,
+        {
+          progress: 80,
+          details: [
+            `Arc Balance: ${treasuryPlan.arcBalance} ${treasuryPlan.invoiceCurrency}`,
+            `Invoice: ${treasuryPlan.invoiceAmount} ${treasuryPlan.invoiceCurrency}`,
+            'No swap or bridge needed',
+          ],
+        }
+      ));
+    } else if (treasuryPlan.canExecute) {
+      const stepDescriptions = treasuryPlan.steps.map(s => s.description);
+      sendEvent(controller, 'thinking', createThinkingLog(
+        'treasuryManager',
+        'processing',
+        `Arc only has ${treasuryPlan.arcBalance} ${treasuryPlan.invoiceCurrency} but we need ${treasuryPlan.invoiceAmount}. I've prepared an execution plan to cover the deficit of ${treasuryPlan.deficit} ${treasuryPlan.invoiceCurrency}.`,
+        {
+          progress: 80,
+          details: [
+            `Arc Balance: ${treasuryPlan.arcBalance} ${treasuryPlan.invoiceCurrency}`,
+            `Deficit: ${treasuryPlan.deficit} ${treasuryPlan.invoiceCurrency}`,
+            ...(treasuryPlan.swapQuoteEth ? [`Swap Cost: ~${treasuryPlan.swapQuoteEth} ETH`] : []),
+            '--- Execution Steps ---',
+            ...stepDescriptions,
+          ],
+        }
+      ));
+    } else {
+      sendEvent(controller, 'thinking', createThinkingLog(
+        'treasuryManager',
+        'error',
+        `Cannot fulfill this invoice: ${treasuryPlan.reason}`,
+        { progress: 100 }
+      ));
+    }
+
+    await new Promise(r => setTimeout(r, 400));
+
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'treasuryManager',
+      'success',
+      treasuryPlan.canExecute
+        ? `Execution plan ready with ${treasuryPlan.steps.length} step(s). Awaiting your approval to proceed.`
+        : `Cannot execute: ${treasuryPlan.reason}`,
+      {
+        progress: 100,
+        data: treasuryPlan,
+      }
+    ));
+
+    // Send complete with treasury plan
+    const finalState = {
+      ...state,
+      treasuryPlan,
+      currentStep: 'complete' as const,
+    };
+
+    sendEvent(controller, 'complete', finalState);
+
+    console.log('✅ Treasury Manager: Plan ready');
+    return finalState;
+
+  } catch (error) {
+    console.error('❌ Treasury Manager Error:', error);
+
+    sendEvent(controller, 'thinking', createThinkingLog(
+      'treasuryManager',
+      'error',
+      `Treasury check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
     ));
 
     return {
@@ -508,6 +621,23 @@ export async function POST(request: NextRequest) {
             sendEvent(controller, 'error', { error: state.error });
             controller.close();
             return;
+          }
+
+          // Agent 2: Treasury Manager — only if CFO approved
+          if (state.recommendation?.recommendation === 'APPROVE') {
+            state = await treasuryManagerWithStream(state, controller);
+
+            if (state.currentStep === 'error') {
+              sendEvent(controller, 'error', { error: state.error });
+              controller.close();
+              return;
+            }
+          } else {
+            // Not approved — send complete without treasury plan
+            sendEvent(controller, 'complete', {
+              ...state,
+              currentStep: 'complete',
+            });
           }
 
         } catch (error) {
