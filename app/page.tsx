@@ -1,75 +1,14 @@
 'use client';
 
-import { Toaster } from 'react-hot-toast';
 import Typewriter from 'typewriter-effect';
 
-import { Sidebar } from '@/app/components/Sidebar';
 import { AgentProvider, useAgent } from '@/app/components/AgentProvider';
 import { ChatInterface } from '@/app/components/chat/ChatInterface';
-import { 
-  Share2, 
-  MoreVertical, 
-  ChevronDown, 
-  Plus, 
-  AudioWaveform, 
-  ArrowUp,
-  BookOpen,
-  Laptop,
-  Globe,
+import {
   ShieldAlert,
   FileText,
   Activity,
-  Wallet
 } from 'lucide-react';
-
-function Header(): React.JSX.Element {
-  const {
-    walletAddress,
-    connectWallet,
-    disconnectWallet,
-    isWalletConnecting,
-  } = useAgent();
-  const walletLabel = walletAddress
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-    : 'Connect Wallet';
-
-  return (
-    <header className="flex h-16 items-center justify-between px-6">
-      <div />
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => {
-            if (!isWalletConnecting && !walletAddress) {
-              void connectWallet();
-            }
-          }}
-          disabled={isWalletConnecting}
-          className="group inline-flex items-center gap-3 rounded-full border border-zinc-200 bg-white/90 px-4 py-2 text-sm font-semibold text-zinc-900 shadow-[0_14px_40px_-24px_rgba(0,0,0,0.6)] transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          <span
-            className={`flex h-2.5 w-2.5 rounded-full ${
-              walletAddress ? 'bg-emerald-400' : 'bg-zinc-300'
-            } shadow-[0_0_0_4px_rgba(204,244,55,0.12)]`}
-          />
-          <Wallet size={16} className="text-zinc-700 transition-colors group-hover:text-zinc-900" />
-          <span className="whitespace-nowrap">
-            {isWalletConnecting ? 'Connecting...' : walletLabel}
-          </span>
-        </button>
-        {walletAddress && (
-          <button
-            onClick={() => {
-              void disconnectWallet();
-            }}
-            className="rounded-full border border-zinc-200/70 px-3 py-1 text-xs font-semibold text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-800"
-          >
-            Disconnect
-          </button>
-        )}
-      </div>
-    </header>
-  );
-}
 
 function MainContent() {
   const { state: agentState } = useAgent();
@@ -82,7 +21,6 @@ function MainContent() {
   if (agentState) {
     return (
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
         <div className="flex-1 overflow-hidden">
            <ChatInterface />
         </div>
@@ -92,7 +30,6 @@ function MainContent() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-       <Header />
        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-20 overflow-y-auto">
             <div className="w-full max-w-3xl space-y-12">
               
@@ -202,22 +139,7 @@ function MainContent() {
 export default function Home() {
   return (
     <AgentProvider>
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          duration: 2800,
-          className:
-            'rounded-2xl border border-white/10 bg-zinc-950/95 px-4 py-3 text-sm font-medium text-white shadow-[0_20px_60px_-25px_rgba(0,0,0,0.6)] backdrop-blur',
-        }}
-      />
-      <div className="flex h-screen w-full overflow-hidden bg-black font-sans">
-        <Sidebar />
-        
-        {/* Main Content Area */}
-        <main className="flex flex-1 flex-col overflow-hidden bg-white shadow-2xl transition-all md:m-3 md:rounded-[32px] md:border md:border-zinc-200/50">
-           <MainContent /> 
-        </main>
-      </div>
+      <MainContent />
     </AgentProvider>
   );
 }
