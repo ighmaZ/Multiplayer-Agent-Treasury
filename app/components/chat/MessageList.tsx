@@ -437,12 +437,12 @@ export function MessageList({ state, isLoading, onApprove, isApproving }: Messag
                 ) : isApproving ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Awaiting MetaMask...
+                    Processing...
                   </>
                 ) : (
                   <>
                     <Wallet className="h-4 w-4" />
-                    Approve & Pay in MetaMask
+                    Approve & Pay
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </>
                 )}

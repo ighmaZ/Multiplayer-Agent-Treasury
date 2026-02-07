@@ -18,8 +18,6 @@ export function ChatInterface(): React.JSX.Element {
     setState: setAgentState,
     isLoading,
     setIsLoading,
-    walletAddress,
-    ensureWalletNetwork,
   } = useAgent();
   const [thinkingLogs, setThinkingLogs] = useState<ThinkingLog[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -47,10 +45,6 @@ export function ChatInterface(): React.JSX.Element {
 
   const handleSubmit = async () => {
     if (!selectedFile) return;
-    if (!walletAddress) {
-      showToast('Connect wallet first');
-      return;
-    }
 
     // Clean up any existing connection
     if (eventSourceRef.current) {
@@ -65,7 +59,6 @@ export function ChatInterface(): React.JSX.Element {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('payerAddress', walletAddress);
 
       // Use streaming API
       const response = await fetch('/api/agents/stream', {
@@ -142,7 +135,7 @@ export function ChatInterface(): React.JSX.Element {
       setAgentState({
         pdfBuffer: null,
         fileName: selectedFile.name,
-        payerAddress: walletAddress,
+        payerAddress: null,
         currentStep: 'error',
         invoiceData: null,
         securityScan: null,
@@ -155,32 +148,27 @@ export function ChatInterface(): React.JSX.Element {
   };
 
   const handleApprove = async () => {
-    if (!agentState?.paymentPlan?.preparedTransaction || !walletAddress) {
-      if (!walletAddress) {
-        showToast('Connect wallet first');
-      }
-      return;
-    }
+    if (!agentState?.paymentPlan?.preparedTransaction) return;
 
     setIsApproving(true);
     try {
-      if (typeof window === 'undefined' || !window.ethereum) {
-        throw new Error('MetaMask is required to approve transactions');
+      const response = await fetch('/api/treasury/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletId: agentState.paymentPlan.method === 'SWAP_EXACT_OUT'
+            ? process.env.NEXT_PUBLIC_CIRCLE_BASE_SEPOLIA_WALLET_ID
+            : process.env.NEXT_PUBLIC_CIRCLE_ARC_WALLET_ID,
+          contractAddress: agentState.paymentPlan.preparedTransaction.to,
+          callData: agentState.paymentPlan.preparedTransaction.data,
+          amount: agentState.paymentPlan.preparedTransaction.value,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Transaction failed');
       }
-
-      await ensureWalletNetwork();
-
-      const tx = {
-        from: walletAddress,
-        to: agentState.paymentPlan.preparedTransaction.to,
-        data: agentState.paymentPlan.preparedTransaction.data,
-        value: agentState.paymentPlan.preparedTransaction.value,
-      };
-
-      const hash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [tx],
-      }) as string;
 
       setAgentState(prev =>
         prev && prev.paymentPlan
@@ -188,11 +176,12 @@ export function ChatInterface(): React.JSX.Element {
               ...prev,
               paymentPlan: {
                 ...prev.paymentPlan,
-                submittedTxHash: hash as string,
+                submittedTxHash: result.txHash || result.transactionId,
               },
             }
           : prev
       );
+      showToast('Transaction submitted successfully');
     } catch (error) {
       console.error('Approval failed:', error);
       alert(error instanceof Error ? error.message : 'Approval failed');

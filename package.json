@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "^10.1.0",
     "@google/generative-ai": "^0.24.1",
     "@langchain/core": "^1.1.19",
     "@langchain/google-genai": "^2.1.15",
@@ -35,9 +36,11 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

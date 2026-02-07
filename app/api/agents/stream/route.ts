@@ -469,14 +469,7 @@ export async function POST(request: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const pdfBuffer = Buffer.from(arrayBuffer);
-    const payerAddress = formData.get('payerAddress') as string | null;
-
-    if (!payerAddress) {
-      return new Response(
-        JSON.stringify({ error: 'Payer wallet address is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    const payerAddress = process.env.CIRCLE_BASE_SEPOLIA_WALLET_ADDRESS || undefined;
 
     // Create stream
     const stream = new ReadableStream({
