@@ -545,9 +545,9 @@ export function MessageList({ state, isLoading, onApprove, isApproving }: Messag
                 <div key={idx} className="flex items-start gap-3 text-sm">
                   <div className={`
                     mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full
-                    ${state.recommendation.recommendation === 'APPROVE'
+                    ${state.recommendation?.recommendation === 'APPROVE'
                       ? 'bg-[#ccf437]'
-                      : state.recommendation.recommendation === 'REVIEW'
+                      : state.recommendation?.recommendation === 'REVIEW'
                       ? 'bg-amber-500'
                       : 'bg-red-500'
                     }

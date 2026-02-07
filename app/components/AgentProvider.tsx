@@ -3,7 +3,7 @@
 
 'use client';
 
-import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, ReactNode, JSX } from 'react';
 import { toast } from 'react-hot-toast';
 import { AgentState } from '@/app/lib/agents/state';
 import { sepoliaMetaMaskConfig } from '@/app/lib/services/paymentPlanner';

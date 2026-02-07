@@ -64,7 +64,7 @@ function useStableTypewriter(text: string, isStreaming: boolean, speed: number =
   // Track how much text we've already displayed (persists across renders)
   const displayedLengthRef = useRef(0);
   const [displayedText, setDisplayedText] = useState('');
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef(0);
 
   useEffect(() => {
