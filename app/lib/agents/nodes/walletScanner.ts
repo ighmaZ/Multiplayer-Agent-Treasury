@@ -1,7 +1,7 @@
 // lib/agents/nodes/walletScanner.ts
 // Wallet Scanner Agent Node - Checks wallet security using Etherscan
 
-import { scanWalletAddress } from '@/app/lib/services/etherscanService';
+import { scanWalletAddress } from '@/app/lib/services/WalletscanService';
 import { AgentState, addLog } from '../state';
 
 /**

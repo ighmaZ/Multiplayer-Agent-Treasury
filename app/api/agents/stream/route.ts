@@ -6,7 +6,7 @@ import { formatUnits } from 'viem';
 
 import { AgentState, createInitialState, createThinkingLog } from '@/app/lib/agents/state';
 import { streamInvoiceExtraction, streamCFORecommendation } from '@/app/lib/services/geminiService';
-import { scanWalletAddress } from '@/app/lib/services/etherscanService';
+import { scanWalletAddress } from '@/app/lib/services/WalletscanService';
 import { buildPaymentPlan } from '@/app/lib/services/paymentPlanner';
 import { buildTreasuryPlan } from '@/app/lib/services/treasuryManager';
 
