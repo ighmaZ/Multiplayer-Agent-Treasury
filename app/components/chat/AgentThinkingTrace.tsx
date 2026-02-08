@@ -37,21 +37,23 @@ const StepIcon = memo(function StepIcon({
   const isError = status === 'error';
 
   return (
-    <div className={`
-      flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-300
-      ${isComplete 
-        ? 'bg-green-100 text-green-600' 
-        : isError
-        ? 'bg-red-100 text-red-600'
-        : isActive
-        ? 'bg-[#ccf437]/20 text-zinc-700'
-        : 'bg-zinc-100 text-zinc-500'
-      }
-    `}>
+    <div
+      className={`
+        flex h-8 w-8 items-center justify-center rounded-md border transition-all duration-300
+        ${isComplete 
+          ? 'border-emerald-300/60 bg-emerald-50 text-emerald-700 shadow-[0_0_18px_rgba(16,185,129,0.12)]' 
+          : isError
+          ? 'border-rose-300/60 bg-rose-50 text-rose-600 shadow-[0_0_18px_rgba(244,63,94,0.12)]'
+          : isActive
+          ? 'border-emerald-300/60 bg-emerald-100/70 text-emerald-700 shadow-[0_0_20px_rgba(16,185,129,0.18)]'
+          : 'border-emerald-200/60 bg-white text-emerald-600/70'
+        }
+      `}
+    >
       {isActive ? (
         <div className="relative">
           <Icon className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#ccf437] animate-pulse" />
+          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
         </div>
       ) : (
         <Icon className="h-4 w-4" />
@@ -153,14 +155,14 @@ const ThinkingStep = memo(function ThinkingStep({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
       className={`
-        rounded-xl border p-4 transition-all duration-300
+        rounded-lg border p-4 transition-all duration-300
         ${isActive 
-          ? 'border-[#ccf437] bg-[#ccf437]/5 shadow-[0_0_0_1px_rgba(204,244,55,0.3)]' 
+          ? 'border-emerald-300/70 bg-emerald-50/70 shadow-[0_0_0_1px_rgba(16,185,129,0.2)]' 
           : isComplete
-          ? 'border-green-200 bg-green-50/30'
+          ? 'border-emerald-200/70 bg-emerald-50/40'
           : log.status === 'error'
-          ? 'border-red-200 bg-red-50/30'
-          : 'border-zinc-200 bg-white'
+          ? 'border-rose-300/60 bg-rose-50/60'
+          : 'border-emerald-200/70 bg-white'
         }
       `}
     >
@@ -172,13 +174,13 @@ const ThinkingStep = memo(function ThinkingStep({
           <div className="flex items-center gap-2 flex-wrap">
             {log.agent && (
               <span className={`
-                inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
+                inline-flex items-center px-2 py-0.5 rounded-sm text-[10px] font-semibold uppercase tracking-[0.2em] border
                 ${log.agent === 'treasury'
-                  ? 'bg-violet-100 text-violet-700'
-                  : 'bg-zinc-100 text-zinc-500'
+                  ? 'border-sky-300/60 text-sky-700 bg-sky-50'
+                  : 'border-emerald-200/70 text-emerald-700 bg-emerald-50'
                 }
               `}>
-                {log.agent === 'treasury' ? 'Agent 2' : 'Agent 1'}
+                {log.agent === 'treasury' ? 'AGENT-02' : 'AGENT-01'}
               </span>
             )}
             <span className="font-semibold text-zinc-900 text-sm">
@@ -187,20 +189,20 @@ const ThinkingStep = memo(function ThinkingStep({
 
             {/* Status badge */}
             {isActive && (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-[#ccf437]/30 text-zinc-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-zinc-700 animate-pulse" />
-                {log.status === 'thinking' ? 'Analyzing' : 'Processing'}
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-300/60 bg-emerald-100/70 text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                {log.status === 'thinking' ? 'ANALYZING' : 'PROCESSING'}
               </span>
             )}
             {isComplete && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-300/60 bg-emerald-100/70 text-emerald-700">
                 <CheckCircle2 className="h-3 w-3" />
-                Done
+                COMPLETE
               </span>
             )}
             {log.status === 'error' && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                Failed
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border border-rose-300/60 bg-rose-100/70 text-rose-700">
+                FAILED
               </span>
             )}
           </div>
@@ -209,12 +211,13 @@ const ThinkingStep = memo(function ThinkingStep({
 
       {/* Reasoning text with stable typewriter */}
       <div className="pl-11">
-        <p className="text-sm text-zinc-600 leading-relaxed">
+        <p className="text-sm text-zinc-700 leading-relaxed">
+          <span className="text-emerald-600 mr-2">$</span>
           {textToShow}
           {/* Blinking cursor only when actively typing */}
           {(isTyping || (shouldAnimate && isActive)) && (
             <span 
-              className="inline-block w-0.5 h-4 bg-zinc-800 ml-0.5 align-text-bottom"
+              className="inline-block w-0.5 h-4 bg-emerald-700 ml-0.5 align-text-bottom"
               style={{ animation: 'blink 0.8s step-end infinite' }}
             />
           )}
@@ -222,18 +225,18 @@ const ThinkingStep = memo(function ThinkingStep({
 
         {/* Details */}
         {log.details && log.details.length > 0 && isComplete && (
-          <div className="mt-3 pt-3 border-t border-zinc-100">
+          <div className="mt-3 pt-3 border-t border-emerald-200/60">
             <div className="flex flex-wrap gap-2">
               {log.details.slice(0, 3).map((detail, idx) => (
                 <code
                   key={idx}
-                  className="rounded bg-zinc-50 px-2 py-1 text-xs text-zinc-600 border border-zinc-100 font-mono truncate max-w-[200px]"
+                  className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700 border border-emerald-200/70 font-mono truncate max-w-[220px]"
                 >
                   {detail}
                 </code>
               ))}
               {log.details.length > 3 && (
-                <span className="text-xs text-zinc-400 self-center">
+                <span className="text-xs text-emerald-600/70 self-center">
                   +{log.details.length - 3} more
                 </span>
               )}
@@ -276,8 +279,8 @@ const CollapsedSummary = memo(function CollapsedSummary({
       onClick={onExpand}
       className="
         w-full flex items-center gap-3 p-4
-        rounded-xl border border-zinc-200 bg-white shadow-sm
-        hover:shadow-md hover:border-zinc-300
+        rounded-xl border border-emerald-300/60 bg-white shadow-[0_12px_30px_-18px_rgba(16,185,129,0.25)]
+        hover:border-emerald-300 hover:shadow-[0_16px_40px_-20px_rgba(16,185,129,0.35)]
         transition-all duration-200
         cursor-pointer text-left
       "
@@ -286,16 +289,16 @@ const CollapsedSummary = memo(function CollapsedSummary({
       <div className={`
         flex h-8 w-8 items-center justify-center rounded-lg
         ${hasError 
-          ? 'bg-red-100 text-red-600' 
+          ? 'bg-rose-50 text-rose-700 border border-rose-300/60' 
           : isStreaming 
-          ? 'bg-[#ccf437]/20 text-zinc-700' 
-          : 'bg-green-100 text-green-600'
+          ? 'bg-emerald-50 text-emerald-700 border border-emerald-300/60' 
+          : 'bg-emerald-50 text-emerald-700 border border-emerald-300/60'
         }
       `}>
         {isStreaming ? (
           <div className="relative">
             <Brain className="h-4 w-4" />
-            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#ccf437] animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>
         ) : hasError ? (
           <span className="font-bold text-sm">!</span>
@@ -306,24 +309,24 @@ const CollapsedSummary = memo(function CollapsedSummary({
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-900">
+        <p className="text-sm font-semibold text-zinc-900">
           {isStreaming ? (
             <>
-              <span>Thinking</span>
-              <span className="text-zinc-400 mx-1">·</span>
-              <span className="text-zinc-500 truncate">{latestLog?.title}</span>
+              <span>SESSION ACTIVE</span>
+              <span className="text-emerald-700/40 mx-1">·</span>
+              <span className="text-emerald-700/70 truncate">{latestLog?.title}</span>
             </>
           ) : hasError ? (
-            'Analysis encountered an issue'
+            'SESSION ERROR'
           ) : (
-            'Analysis complete'
+            'SESSION COMPLETE'
           )}
         </p>
         
         {/* Progress bar */}
-        <div className="mt-2 h-1 w-full bg-zinc-100 rounded-full overflow-hidden">
+        <div className="mt-2 h-1 w-full bg-emerald-200/60 rounded-full overflow-hidden">
           <motion.div
-            className={`h-full rounded-full ${hasError ? 'bg-red-400' : isStreaming ? 'bg-[#ccf437]' : 'bg-green-500'}`}
+            className={`h-full rounded-full ${hasError ? 'bg-rose-400' : isStreaming ? 'bg-emerald-500' : 'bg-emerald-600'}`}
             initial={{ width: 0 }}
             animate={{ width: `${logs.length > 0 ? (completedCount / logs.length) * 100 : 0}%` }}
             transition={{ duration: 0.3 }}
@@ -332,7 +335,7 @@ const CollapsedSummary = memo(function CollapsedSummary({
       </div>
 
       {/* Expand */}
-      <ChevronUp className="h-4 w-4 text-zinc-400" />
+      <ChevronUp className="h-4 w-4 text-emerald-700/50" />
     </motion.button>
   );
 });
@@ -378,11 +381,15 @@ export function AgentThinkingTrace({ logs, isStreaming }: AgentThinkingTraceProp
   if (logs.length === 0) return null;
 
   return (
-    <div className="w-full">
-      {/* Blink animation */}
+    <div className="w-full font-mono">
+      {/* Blink + scanline animations */}
       <style jsx global>{`
         @keyframes blink {
           50% { opacity: 0; }
+        }
+        @keyframes scanlines {
+          0% { background-position: 0 0; }
+          100% { background-position: 0 12px; }
         }
       `}</style>
 
@@ -400,19 +407,24 @@ export function AgentThinkingTrace({ logs, isStreaming }: AgentThinkingTraceProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden"
+            className="relative overflow-hidden rounded-2xl border border-emerald-300/50 bg-[#f7f9f6] shadow-[0_24px_70px_-45px_rgba(16,185,129,0.35)]"
           >
+            {/* Terminal overlays */}
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_0%,rgba(16,185,129,0.18)_0%,rgba(247,249,246,0.92)_55%,rgba(247,249,246,0.98)_100%)]" />
+            <div className="pointer-events-none absolute inset-0 opacity-[0.12]" style={{ backgroundImage: 'linear-gradient(rgba(16,185,129,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.05) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+            <div className="pointer-events-none absolute inset-0 opacity-[0.08] animate-[scanlines_6s_linear_infinite]" style={{ backgroundImage: 'linear-gradient(rgba(16,185,129,0.08) 1px, transparent 1px)', backgroundSize: '100% 12px' }} />
+
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-100">
+            <div className="relative z-10 flex items-center justify-between px-5 py-3 border-b border-emerald-200/70">
               <div className="flex items-center gap-3">
                 <div className={`
-                  flex h-8 w-8 items-center justify-center rounded-lg
-                  ${isStreaming ? 'bg-[#ccf437]/20 text-zinc-700' : 'bg-green-100 text-green-600'}
+                  flex h-8 w-8 items-center justify-center rounded-md border
+                  ${isStreaming ? 'border-emerald-300/60 text-emerald-700 bg-emerald-50' : 'border-emerald-300/60 text-emerald-700 bg-emerald-50'}
                 `}>
                   {isStreaming ? (
                     <div className="relative">
                       <Brain className="h-4 w-4" />
-                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#ccf437] animate-pulse" />
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     </div>
                   ) : (
                     <CheckCircle2 className="h-4 w-4" />
@@ -420,14 +432,13 @@ export function AgentThinkingTrace({ logs, isStreaming }: AgentThinkingTraceProp
                 </div>
                 
                 <div>
-                  <span className="font-semibold text-zinc-900 text-sm">AI Agent Reasoning</span>
-                  <span className="ml-2 text-xs text-zinc-400">{completedCount}/{logs.length} steps</span>
+                  <span className="ml-2 text-xs text-emerald-700/60">{completedCount}/{logs.length} steps</span>
                 </div>
               </div>
 
               <button
                 onClick={handleToggle}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs text-emerald-700/70 hover:text-emerald-800 hover:bg-emerald-100/70 rounded-md transition-colors"
               >
                 Collapse
                 <ChevronDown className="h-3 w-3" />
@@ -437,7 +448,7 @@ export function AgentThinkingTrace({ logs, isStreaming }: AgentThinkingTraceProp
             {/* Steps */}
             <div
               ref={scrollRef}
-              className="p-4 space-y-3 max-h-[450px] overflow-y-auto scrollbar-thin"
+              className="relative z-10 p-4 space-y-3 max-h-[450px] overflow-y-auto scrollbar-thin"
               style={{ overscrollBehavior: 'contain' }}
             >
               {logs.map((log, index) => (
