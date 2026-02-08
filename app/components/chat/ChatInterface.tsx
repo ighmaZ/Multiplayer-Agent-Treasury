@@ -6,14 +6,39 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Send, Plus, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+
 import { MessageList } from './MessageList';
 import { AgentThinkingTrace } from './AgentThinkingTrace';
+import { ChatMessages } from './ChatMessages';
 import { useAgent } from '../AgentProvider';
 import { ThinkingLog } from '@/app/lib/agents/state';
 import { ExecutionStep } from '@/app/lib/services/treasuryManager';
+import type { ChatHistoryMessage, ChatMessage } from '@/app/types/chat';
+
+const ANALYSIS_TRIGGER_PATTERN = /\b(analy[sz]e|analysis|review|scan|audit|check|process|summari[sz]e|extract|evaluate)\b/i;
+
+function shouldTriggerAnalysis(message: string): boolean {
+  return ANALYSIS_TRIGGER_PATTERN.test(message);
+}
+
+function createChatMessage(role: ChatMessage['role'], content: string): ChatMessage {
+  const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  return {
+    id,
+    role,
+    content,
+    createdAt: new Date().toISOString(),
+  };
+}
 
 export function ChatInterface(): React.JSX.Element {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [messageInput, setMessageInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const {
     state: agentState,
     setState: setAgentState,
@@ -33,6 +58,14 @@ export function ChatInterface(): React.JSX.Element {
         <span className="h-2.5 w-2.5 rounded-full bg-[#ccf437] shadow-[0_0_0_4px_rgba(204,244,55,0.15)]" />
       ),
     });
+  }, []);
+
+  const appendChatMessage = useCallback((message: ChatMessage): void => {
+    setChatMessages(prev => [...prev, message]);
+  }, []);
+
+  const buildChatHistory = useCallback((messages: ChatMessage[]): ChatHistoryMessage[] => {
+    return messages.slice(-10).map(({ role, content }) => ({ role, content }));
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,6 +189,58 @@ export function ChatInterface(): React.JSX.Element {
     }
   };
 
+  const handleSendMessage = async (): Promise<void> => {
+    if (isChatLoading || isLoading) return;
+
+    const trimmedMessage = messageInput.trim();
+
+    if (!trimmedMessage) {
+      if (selectedFile && !isStreaming && !isLoading) {
+        await handleSubmit();
+      }
+      return;
+    }
+
+    const userMessage = createChatMessage('user', trimmedMessage);
+    appendChatMessage(userMessage);
+    setMessageInput('');
+    setIsChatLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: trimmedMessage,
+          hasFile: Boolean(selectedFile),
+          fileName: selectedFile?.name ?? null,
+          history: buildChatHistory([...chatMessages, userMessage]),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
+      }
+
+      const data = await response.json();
+      const reply = typeof data.reply === 'string' ? data.reply : 'I ran into an issue responding.';
+
+      appendChatMessage(createChatMessage('assistant', reply));
+    } catch (error) {
+      console.error('❌ Chat request failed:', error);
+      appendChatMessage(
+        createChatMessage('assistant', 'Sorry, I had trouble responding. Please try again.')
+      );
+    } finally {
+      setIsChatLoading(false);
+    }
+
+    if (shouldTriggerAnalysis(trimmedMessage) && selectedFile && !isStreaming && !isLoading) {
+      await handleSubmit();
+    }
+  };
+
   const handleApprove = async () => {
     if (!agentState?.treasuryPlan?.canExecute) return;
 
@@ -259,6 +344,12 @@ export function ChatInterface(): React.JSX.Element {
       <div className="flex bg-transparent h-full flex-col">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {chatMessages.length > 0 && (
+          <div className="max-w-2xl mx-auto">
+            <ChatMessages messages={chatMessages} isTyping={isChatLoading} />
+          </div>
+        )}
+
         {/* Thinking Trace - Real-time AI reasoning */}
         {(thinkingLogs.length > 0 || isStreaming) && (
           <div className="max-w-2xl mx-auto">
@@ -320,23 +411,33 @@ export function ChatInterface(): React.JSX.Element {
             {/* Input Field */}
             <input
               type="text"
-              placeholder={selectedFile ? `Ready to analyze ${selectedFile.name}...` : "Upload an invoice to get started..."}
+              placeholder={selectedFile
+                ? `Ask about ${selectedFile.name} or say \"analyze\" to start...`
+                : 'Ask me to review an invoice or upload a PDF...'}
+              value={messageInput}
+              onChange={event => setMessageInput(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  void handleSendMessage();
+                }
+              }}
               className="flex-1 bg-transparent px-2 text-base md:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none min-w-0"
-              disabled={isLoading}
+              disabled={isChatLoading || isLoading}
             />
 
             {/* Send/Analyze Button */}
             <button
-              onClick={handleSubmit}
-              disabled={!selectedFile || isLoading}
+              onClick={handleSendMessage}
+              disabled={isChatLoading || isLoading || (!selectedFile && messageInput.trim().length === 0)}
               className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-all
-                ${!selectedFile || isLoading
+                ${(isChatLoading || isLoading || (!selectedFile && messageInput.trim().length === 0))
                   ? 'bg-black text-zinc-300'
                   : 'bg-black text-white hover:bg-zinc-800'
                 }
               `}
             >
-              {isLoading ? (
+              {isLoading || isChatLoading ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
                 <Send size={18} />

@@ -2,7 +2,16 @@
 // Google Gemini integration for PDF invoice extraction
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+
 import { InvoiceData, PaymentPlan } from '@/app/types';
+import type { ChatHistoryMessage } from '@/app/types/chat';
+
+interface ChatContext {
+  message: string;
+  hasFile: boolean;
+  fileName: string | null;
+  history: ChatHistoryMessage[];
+}
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 
@@ -107,6 +116,73 @@ Be precise with wallet addresses - they must be valid Ethereum addresses startin
 
   } catch (error) {
     console.error('❌ Gemini extraction error:', error);
+    throw error;
+  }
+}
+
+function buildChatPrompt(context: ChatContext): string {
+  const history = context.history.length > 0
+    ? context.history
+    : [{ role: 'user', content: context.message }];
+
+  const historyText = history
+    .map(entry => `${entry.role === 'user' ? 'User' : 'Assistant'}: ${entry.content}`)
+    .join('\n');
+
+  const fileContext = context.hasFile
+    ? `A PDF invoice named \"${context.fileName ?? 'uploaded invoice'}\" is available for analysis.`
+    : 'No invoice file has been uploaded yet.';
+
+  return `
+You are Tresora's CFO assistant. Be concise, helpful, and grounded. 
+If the user asks to analyze an invoice and a file is available, acknowledge and say you will start the analysis. 
+If no file is available, ask them to upload a PDF. 
+Do not fabricate invoice details you have not seen.
+
+FILE CONTEXT:
+${fileContext}
+
+CONVERSATION:
+${historyText}
+
+Assistant:
+  `.trim();
+}
+
+/**
+ * Generate a chat response for the assistant UI.
+ */
+export async function generateChatResponse(context: ChatContext): Promise<string> {
+  try {
+    if (!GOOGLE_API_KEY) {
+      throw new Error('Missing GOOGLE_API_KEY');
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+    });
+
+    const prompt = buildChatPrompt(context);
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 512,
+      },
+    });
+
+    const response = await result.response;
+    const text = response.text().trim();
+
+    return text.length > 0 ? text : 'I am ready to help. What would you like me to do?';
+  } catch (error) {
+    console.error('❌ Gemini chat error:', error);
     throw error;
   }
 }
