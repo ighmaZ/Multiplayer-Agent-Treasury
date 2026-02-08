@@ -118,6 +118,12 @@ Security is paramount. The application **never holds private keys**. All transac
     pnpm dev
     ```
 
+5.  **Test Invoice Files**
+    Invoices are in the `invoices/` folder.
+    Invoice upload is required to run and validate the full app flow.
+    Use these files to test end-to-end behavior.
+
+  
 ---
 
 ##  Technology Stack
@@ -140,13 +146,9 @@ Security is paramount. The application **never holds private keys**. All transac
 *   **Animations:** Framer Motion (`framer-motion`)
 *   **Icons:** Lucide React (`lucide-react`)
 *   **Notifications:** React Hot Toast (`react-hot-toast`)
-*   **Visualizations:** React Flow (`reactflow`)
 
 ###  Utilities
 *   **Validation:** Zod (`zod`)
-*   **Processing:** PDF Parse / PDF2Pic (Invoice Ingestion)
 *   **Security Scanning:** Etherscan API
 
 ---
-
-
