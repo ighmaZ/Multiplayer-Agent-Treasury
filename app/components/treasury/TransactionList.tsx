@@ -8,6 +8,7 @@ interface TransactionListProps {
 }
 
 const STATE_CONFIG: Record<string, { icon: typeof CheckCircle2; color: string; label: string }> = {
+  COMPLETE: { icon: CheckCircle2, color: 'text-emerald-500', label: 'Complete' },
   COMPLETED: { icon: CheckCircle2, color: 'text-emerald-500', label: 'Completed' },
   CONFIRMED: { icon: CheckCircle2, color: 'text-emerald-500', label: 'Confirmed' },
   PENDING: { icon: Clock, color: 'text-amber-500', label: 'Pending' },
@@ -77,7 +78,7 @@ export function TransactionList({ transactions }: TransactionListProps) {
                 {/* Amount */}
                 <div className="text-right flex-shrink-0">
                   <div className={`text-sm font-semibold ${isInbound ? 'text-emerald-600' : 'text-zinc-900'}`}>
-                    {isInbound ? '+' : '-'}{tx.amount}
+                    {isInbound ? '+' : '-'}{tx.amount}{tx.token ? ` ${tx.token}` : ''}
                   </div>
                   <div className="text-xs text-zinc-400">{formatDate(tx.createDate)}</div>
                 </div>

@@ -4,28 +4,42 @@
 'use client';
 
 import { formatUnits } from 'viem';
-import { 
-  FileText, 
-  Shield, 
-  Brain, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  HelpCircle, 
+import {
+  FileText,
+  Shield,
+  Brain,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
   Wallet,
   ArrowRight,
   Sparkles,
   TrendingUp,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Landmark,
+  Loader2,
 } from 'lucide-react';
 import { AgentState } from '@/app/lib/agents/state';
+import { ExecutionStep } from '@/app/lib/services/treasuryManager';
 
 interface MessageListProps {
   state: AgentState | null;
   isLoading: boolean;
   onApprove?: () => void;
   isApproving?: boolean;
+  executionSteps?: ExecutionStep[];
+  isExecuting?: boolean;
+  executionDone?: boolean;
+}
+
+function getTxExplorerUrl(txHash: string, stepId: string): string {
+  if (stepId === 'swap') {
+    return `https://sepolia.etherscan.io/tx/${txHash}`;
+  }
+  // Bridge mint + Arc transfer use Arc testnet Blockscout explorer
+  return `https://testnet.arcscan.app/tx/${txHash}`;
 }
 
 function formatTokenAmount(value: string | null | undefined, decimals: number, symbol: string) {
@@ -156,7 +170,7 @@ function DataField({
   );
 }
 
-export function MessageList({ state, isLoading, onApprove, isApproving }: MessageListProps) {
+export function MessageList({ state, isLoading, onApprove, isApproving, executionSteps, isExecuting, executionDone }: MessageListProps) {
   if (!state && !isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -174,6 +188,7 @@ export function MessageList({ state, isLoading, onApprove, isApproving }: Messag
   const hasSecurity = Boolean(state?.securityScan);
   const hasPayment = Boolean(state?.paymentPlan);
   const hasRecommendation = Boolean(state?.recommendation);
+  const hasTreasury = Boolean(state?.treasuryPlan);
 
   return (
     <div className="flex flex-col gap-5">
@@ -416,50 +431,6 @@ export function MessageList({ state, isLoading, onApprove, isApproving }: Messag
             </div>
           )}
 
-          <div className="mt-5 flex flex-col gap-3">
-            {state.paymentPlan.status === 'READY' && state.paymentPlan.preparedTransaction && onApprove && (
-              <button
-                onClick={onApprove}
-                disabled={isApproving || Boolean(state.paymentPlan.submittedTxHash)}
-                className={`
-                  group relative inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold transition-all duration-200
-                  ${isApproving || state.paymentPlan.submittedTxHash
-                    ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-zinc-900 to-black text-white shadow-lg shadow-zinc-900/20 hover:shadow-xl hover:shadow-zinc-900/30 hover:-translate-y-0.5 active:translate-y-0'
-                  }
-                `}
-              >
-                {state.paymentPlan.submittedTxHash ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-[#ccf437]" />
-                    Transaction Submitted
-                  </>
-                ) : isApproving ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Wallet className="h-4 w-4" />
-                    Approve & Pay
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                  </>
-                )}
-              </button>
-            )}
-
-            {state.paymentPlan.submittedTxHash && (
-              <div className="flex items-center gap-2 rounded-xl bg-[#ccf437]/10 px-4 py-3 ring-1 ring-[#ccf437]/40/60">
-                <CheckCircle className="h-4 w-4 text-[#a8cc2a]" />
-                <span className="text-sm font-medium text-[#6b8c18]">Transaction submitted:</span>
-                <code className="text-xs text-[#8ab320] font-mono">
-                  {state.paymentPlan.submittedTxHash.slice(0, 10)}...{state.paymentPlan.submittedTxHash.slice(-8)}
-                </code>
-                <ExternalLink className="h-3.5 w-3.5 text-[#a8cc2a] ml-auto cursor-pointer hover:text-[#6b8c18]" />
-              </div>
-            )}
-          </div>
         </Card>
       )}
 
@@ -557,6 +528,193 @@ export function MessageList({ state, isLoading, onApprove, isApproving }: Messag
               ))}
             </div>
           </div>
+        </Card>
+      )}
+
+      {/* Treasury Plan (Agent 2) */}
+      {state?.treasuryPlan && (
+        <Card gradient>
+          <CardHeader
+            icon={Landmark}
+            title="Treasury Execution Plan"
+            step={5}
+            isComplete={hasTreasury}
+            badge={
+              <div className={`
+                flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide
+                ${executionDone
+                  ? 'bg-green-100 text-green-700 ring-1 ring-green-200'
+                  : state.treasuryPlan.canExecute
+                  ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-200'
+                  : 'bg-red-100 text-red-700 ring-1 ring-red-200'
+                }
+              `}>
+                <div className={`h-1.5 w-1.5 rounded-full ${
+                  executionDone ? 'bg-green-500' :
+                  state.treasuryPlan.canExecute ? 'bg-violet-500 animate-pulse' : 'bg-red-500'
+                }`} />
+                {executionDone ? 'COMPLETED' : state.treasuryPlan.canExecute ? 'READY' : 'BLOCKED'}
+              </div>
+            }
+          />
+
+          {/* Balance overview */}
+          <div className="mb-5 rounded-xl bg-gradient-to-r from-violet-900 to-violet-800 p-4 text-white shadow-lg">
+            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-violet-300">Agent 2 — Treasury Manager</div>
+            <div className="text-base font-semibold">
+              {state.treasuryPlan.arcSufficient
+                ? `Direct transfer — ${state.treasuryPlan.arcBalance} ${state.treasuryPlan.invoiceCurrency} available on Arc`
+                : `Multi-step execution — deficit of ${state.treasuryPlan.deficit} ${state.treasuryPlan.invoiceCurrency}`
+              }
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <DataField
+              label="Invoice Amount"
+              value={`${state.treasuryPlan.invoiceAmount} ${state.treasuryPlan.invoiceCurrency}`}
+              highlight
+            />
+            <DataField
+              label="Arc Balance"
+              value={`${state.treasuryPlan.arcBalance} ${state.treasuryPlan.invoiceCurrency}`}
+            />
+            <DataField
+              label="Recipient"
+              value={`${state.treasuryPlan.recipientAddress.slice(0, 10)}...${state.treasuryPlan.recipientAddress.slice(-8)}`}
+              isCode
+            />
+            {!state.treasuryPlan.arcSufficient && (
+              <>
+                <DataField
+                  label="Deficit"
+                  value={`${state.treasuryPlan.deficit} ${state.treasuryPlan.invoiceCurrency}`}
+                  highlight
+                />
+                {state.treasuryPlan.swapQuoteEth && (
+                  <DataField
+                    label="Swap Cost (ETH)"
+                    value={`~${parseFloat(state.treasuryPlan.swapQuoteEth).toFixed(6)} ETH`}
+                  />
+                )}
+                <DataField
+                  label="Sepolia ETH"
+                  value={`${parseFloat(state.treasuryPlan.sepoliaEthBalance).toFixed(6)} ETH`}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Execution Steps */}
+          {state.treasuryPlan.steps.length > 0 && (
+            <div className="mt-5 rounded-xl border border-zinc-200/80 bg-gradient-to-br from-zinc-50 to-zinc-100/50 p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <Clock className="h-3.5 w-3.5" />
+                <span>Execution Steps</span>
+              </div>
+              <div className="space-y-3">
+                {(executionSteps || state.treasuryPlan.steps).map((step, idx) => {
+                  const stepStatus = step.status;
+                  return (
+                    <div key={step.id} className="flex items-start gap-3">
+                      <div className={`
+                        mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold
+                        ${stepStatus === 'success'
+                          ? 'bg-green-100 text-green-600'
+                          : stepStatus === 'running'
+                          ? 'bg-violet-100 text-violet-600'
+                          : stepStatus === 'failed'
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-zinc-100 text-zinc-400'
+                        }
+                      `}>
+                        {stepStatus === 'success' ? (
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        ) : stepStatus === 'running' ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : stepStatus === 'failed' ? (
+                          <XCircle className="h-3.5 w-3.5" />
+                        ) : (
+                          idx + 1
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-zinc-900">{step.name}</div>
+                        <div className="text-xs text-zinc-500">{step.description}</div>
+                        {step.txHash && step.txHash.startsWith('0x') && (
+                          <a
+                            href={getTxExplorerUrl(step.txHash, step.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
+                          >
+                            <code className="text-[11px] text-violet-600 font-mono underline underline-offset-2 decoration-violet-300">
+                              {step.txHash.slice(0, 14)}...{step.txHash.slice(-8)}
+                            </code>
+                            <ExternalLink className="h-3 w-3 text-violet-400" />
+                          </a>
+                        )}
+                        {step.error && (
+                          <div className="mt-1 text-xs text-red-600">{step.error}</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {state.treasuryPlan.reason && !state.treasuryPlan.canExecute && (
+            <div className="mt-5 rounded-xl bg-gradient-to-br from-red-50 to-rose-50/50 p-4 ring-1 ring-red-200/60">
+              <div className="flex items-start gap-2.5 text-sm text-red-800">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
+                <span className="leading-relaxed">{state.treasuryPlan.reason}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Approval Button / Done State */}
+          {state.treasuryPlan.canExecute && (
+            <div className="mt-5 flex flex-col gap-3">
+              {executionDone ? (
+                <div className="flex items-center justify-center gap-2 rounded-xl bg-green-50 px-6 py-3.5 ring-1 ring-green-200">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-sm font-bold text-green-700">Payment Executed Successfully</span>
+                </div>
+              ) : onApprove && (
+                <button
+                  onClick={onApprove}
+                  disabled={isApproving || isExecuting}
+                  className={`
+                    group relative inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold transition-all duration-200
+                    ${isApproving || isExecuting
+                      ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-violet-700 to-violet-900 text-white shadow-lg shadow-violet-900/20 hover:shadow-xl hover:shadow-violet-900/30 hover:-translate-y-0.5 active:translate-y-0'
+                    }
+                  `}
+                >
+                  {isExecuting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Executing...
+                    </>
+                  ) : isApproving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Landmark className="h-4 w-4" />
+                      Approve & Execute
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
         </Card>
       )}
 
