@@ -1,29 +1,25 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import {
-  MessageSquarePlus,
-  Landmark,
-  FileText
-} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { MessageSquarePlus, Landmark, FileText } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/', label: 'Invoice Agent', icon: FileText },
-    { href: '/treasury', label: 'Treasury', icon: Landmark },
+    { href: "/", label: "Pay Invoice", icon: FileText },
+    { href: "/treasury", label: "Treasury", icon: Landmark },
   ];
 
   return (
     <aside className="hidden h-screen w-[280px] flex-col bg-[#0f0f10] text-zinc-400 md:flex">
       {/* Header / Logo */}
       <div className="flex h-14 items-center gap-2 px-4">
-        <img 
-          src="/favicon.svg" 
-          alt="Tresora Logo" 
-          className="h-8 w-8 rounded-lg"
+        <img
+          src="/v2logo.png"
+          alt="Tresora Logo"
+          className="h-8 w-8 rounded-lg invert"
         />
         <span className="font-semibold text-white">Tresora</span>
       </div>
@@ -36,7 +32,7 @@ export function Sidebar() {
         >
           <div className="flex items-center gap-2">
             <MessageSquarePlus size={16} />
-            <span>New invoice</span>
+            <span>New request</span>
           </div>
           <div className="flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-500 group-hover:bg-zinc-700 group-hover:text-zinc-300">
             <span className="text-[10px]">⌘</span>
@@ -55,8 +51,8 @@ export function Sidebar() {
               href={item.href}
               className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                 isActive
-                  ? 'bg-zinc-900 text-white'
-                  : 'hover:bg-zinc-900 hover:text-white'
+                  ? "bg-zinc-900 text-white"
+                  : "hover:bg-zinc-900 hover:text-white"
               }`}
             >
               <item.icon size={18} />
