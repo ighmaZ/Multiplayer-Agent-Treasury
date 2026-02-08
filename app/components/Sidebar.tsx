@@ -5,8 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   MessageSquarePlus,
   Landmark,
-  FileText,
-  Command
+  FileText
 } from "lucide-react";
 
 export function Sidebar() {
@@ -21,9 +20,11 @@ export function Sidebar() {
     <aside className="hidden h-screen w-[280px] flex-col bg-[#0f0f10] text-zinc-400 md:flex">
       {/* Header / Logo */}
       <div className="flex h-14 items-center gap-2 px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black">
-          <Command size={18} />
-        </div>
+        <img 
+          src="/favicon.svg" 
+          alt="Tresora Logo" 
+          className="h-8 w-8 rounded-lg"
+        />
         <span className="font-semibold text-white">Tresora</span>
       </div>
 
