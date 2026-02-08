@@ -439,6 +439,13 @@ export async function executeTreasuryPlan(
 
       const mintTxHash = bridgeResult.steps?.find((s: any) => s.name === 'mint')?.txHash;
       onStepUpdate('bridge', { status: 'success', txHash: mintTxHash || 'completed' });
+
+      // Wait for bridged USDC to be reflected in Circle's Arc balance
+      // CCTP mint may complete but Circle API needs time to index the balance
+      await waitForArcBalance(
+        plan.invoiceCurrency,
+        parseFloat(plan.invoiceAmount) + ARC_GAS_BUFFER
+      );
     }
 
     // 3. Transfer on Arc
@@ -471,6 +478,26 @@ export async function executeTreasuryPlan(
     }
     return { success: false, error: errMsg };
   }
+}
+
+// ── Wait for bridged funds to appear on Arc ─────────────────────────────────
+
+async function waitForArcBalance(
+  currency: string,
+  minAmount: number,
+  timeoutMs = 180000, // 3 minutes
+  intervalMs = 5000   // poll every 5s
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const balances = await getWalletTokenBalances(ARC_WALLET_ID);
+    const balance = findTokenBalance(balances, currency);
+    if (parseFloat(balance) >= minAmount) {
+      return; // Funds have arrived
+    }
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  throw new Error(`Timed out waiting for ${minAmount} ${currency} to arrive on Arc after bridge`);
 }
 
 // ── Poll for Circle transaction completion ──────────────────────────────────
