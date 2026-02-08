@@ -170,6 +170,20 @@ function DataField({
   );
 }
 
+function FlowConnector() {
+  return (
+    <div className="flex items-center justify-center py-4">
+      <div className="flex flex-col items-center">
+        <div className="h-5 w-px bg-zinc-200/80" />
+        <div className="my-2 flex h-8 w-8 items-center justify-center rounded-full bg-white ring-1 ring-zinc-200 shadow-sm">
+          <ArrowRight className="h-4 w-4 text-zinc-400 rotate-90" />
+        </div>
+        <div className="h-5 w-px bg-zinc-200/80" />
+      </div>
+    </div>
+  );
+}
+
 export function MessageList({ state, isLoading, onApprove, isApproving, executionSteps, isExecuting, executionDone }: MessageListProps) {
   if (!state && !isLoading) {
     return (
@@ -246,6 +260,9 @@ export function MessageList({ state, isLoading, onApprove, isApproving, executio
           </div>
         </Card>
       )}
+      {state?.invoiceData && (state.securityScan || state.paymentPlan || state.recommendation || state.treasuryPlan) && (
+        <FlowConnector />
+      )}
 
       {/* Security Scan Result */}
       {state?.securityScan && (
@@ -316,6 +333,9 @@ export function MessageList({ state, isLoading, onApprove, isApproving, executio
             </div>
           )}
         </Card>
+      )}
+      {state?.securityScan && (state.paymentPlan || state.recommendation || state.treasuryPlan) && (
+        <FlowConnector />
       )}
 
 
@@ -414,6 +434,9 @@ export function MessageList({ state, isLoading, onApprove, isApproving, executio
             </div>
           </div>
         </Card>
+      )}
+      {state?.recommendation && state.treasuryPlan && (
+        <FlowConnector />
       )}
 
       {/* Treasury Plan (Agent 2) */}

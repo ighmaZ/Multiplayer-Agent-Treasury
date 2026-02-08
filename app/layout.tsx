@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tresora - Treasury Management",
   description: "AI-powered treasury management with multi-chain payments",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

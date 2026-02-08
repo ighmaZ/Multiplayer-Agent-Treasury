@@ -7,7 +7,9 @@ import { ChatInterface } from '@/app/components/chat/ChatInterface';
 import {
   ShieldAlert,
   FileText,
-  Activity,
+  CreditCard,
+  PieChart,
+  ArrowRight,
 } from 'lucide-react';
 
 function MainContent() {
@@ -31,12 +33,12 @@ function MainContent() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-20 overflow-y-auto">
-            <div className="w-full max-w-3xl space-y-12">
+            <div className="w-full max-w-6xl space-y-16">
               
               {/* Hero Text */}
               <div className="text-center space-y-4">
                 <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
-                  Hello!
+                  Tresora.fi
                 </h1>
                   <div className="text-xl font-medium text-zinc-300 sm:text-4xl min-h-[3rem] sm:min-h-0 sm:h-auto">
                     <Typewriter
@@ -74,60 +76,92 @@ function MainContent() {
                   So let's make the dashboard generic input trigger a file upload?
               */}
               
-              <div className="relative rounded-2xl bg-white shadow-[0_0_40px_-10px_rgba(0,0,0,0.05)] ring-1 ring-zinc-100 p-6">
+              <div className="relative max-w-3xl mx-auto rounded-2xl bg-white shadow-[0_0_40px_-10px_rgba(0,0,0,0.05)] ring-1 ring-zinc-100 p-6">
                   <div>
                      <ChatInterface />
                   </div>
               </div>
 
               {/* Cards Grid - Replacing with relevant info */}
-              <div className="grid gap-4 sm:grid-cols-3">
-                {/* Card 1 */}
-                <div className="group flex flex-col items-start rounded-xl border border-dashed border-zinc-200 bg-white p-5 text-left transition-all hover:border-zinc-300 hover:shadow-sm">
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#ccf437] text-black">
-                    <FileText size={20} />
+              {/* Cards Flow */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                
+                {/* Card 1: Invoice Analysis */}
+                <div className="group flex flex-1 flex-col items-start rounded-2xl border border-dashed border-zinc-200 bg-white p-6 text-left transition-all hover:border-zinc-300 hover:shadow-md">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#ccf437] text-black shadow-sm">
+                    <FileText size={24} />
                   </div>
-                  <h3 className="mb-1 font-semibold text-zinc-900 group-hover:text-black">
+                  <h3 className="mb-2 text-lg font-semibold text-zinc-900 group-hover:text-black">
                     Invoice Analysis
                   </h3>
-                  <p className="text-xs text-zinc-500 leading-snug">
-                     Upload PDF invoices to extract extraction wallet addresses and payment details automatically.
+                  <p className="text-sm text-zinc-500 leading-relaxed">
+                     Upload PDF invoices to extract wallet addresses and payment details automatically.
                   </p>
                 </div>
 
-                {/* Card 2 */}
-                <div className="group flex flex-col items-start rounded-xl border border-dashed border-zinc-200 bg-white p-5 text-left transition-all hover:border-zinc-300 hover:shadow-sm">
-                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#ccf437] text-black">
-                    <ShieldAlert size={20} />
+                <div className="hidden sm:block text-zinc-300">
+                  <ArrowRight size={24} strokeWidth={1.5} />
+                </div>
+                {/* Mobile arrow */}
+                <div className="block sm:hidden text-zinc-300 self-center transform rotate-90 my-[-10px]">
+                   <ArrowRight size={24} strokeWidth={1.5} />
+                </div>
+
+                {/* Card 2: Security Scan */}
+                <div className="group flex flex-1 flex-col items-start rounded-2xl border border-dashed border-zinc-200 bg-white p-6 text-left transition-all hover:border-zinc-300 hover:shadow-md">
+                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#ccf437] text-black shadow-sm">
+                    <ShieldAlert size={24} />
                   </div>
-                  <h3 className="mb-1 font-semibold text-zinc-900 group-hover:text-black">
+                  <h3 className="mb-2 text-lg font-semibold text-zinc-900 group-hover:text-black">
                     Security Scan
                   </h3>
-                  <p className="text-xs text-zinc-500 leading-snug">
+                  <p className="text-sm text-zinc-500 leading-relaxed">
                     Real-time Etherscan checks to identify high-risk wallets and suspicious history.
                   </p>
                 </div>
 
-                {/* Card 3 */}
-                <div className="group flex flex-col items-start rounded-xl border border-dashed border-zinc-200 bg-white p-5 text-left transition-all hover:border-zinc-300 hover:shadow-sm">
-                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#ccf437] text-black">
-                    <Activity size={20} />
-                  </div>
-                  <h3 className="mb-1 font-semibold text-zinc-900 group-hover:text-black">
-                     Risk Assessment
-                  </h3>
-                  <div className="mt-2 space-y-1">
-                      <div className="flex items-center gap-2 text-[10px] text-zinc-500">
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div> Low Risk (0-39)
-                      </div>
-                       <div className="flex items-center gap-2 text-[10px] text-zinc-500">
-                        <div className="h-2 w-2 rounded-full bg-yellow-500"></div> Medium Risk (40-69)
-                      </div>
-                       <div className="flex items-center gap-2 text-[10px] text-zinc-500">
-                        <div className="h-2 w-2 rounded-full bg-red-500"></div> High Risk (70+)
-                      </div>
-                  </div>
+                <div className="hidden sm:block text-zinc-300">
+                  <ArrowRight size={24} strokeWidth={1.5} />
                 </div>
+                 {/* Mobile arrow */}
+                <div className="block sm:hidden text-zinc-300 self-center transform rotate-90 my-[-10px]">
+                   <ArrowRight size={24} strokeWidth={1.5} />
+                </div>
+
+                {/* Card 3: Budget Check */}
+                <div className="group flex flex-1 flex-col items-start rounded-2xl border border-dashed border-zinc-200 bg-white p-6 text-left transition-all hover:border-zinc-300 hover:shadow-md">
+                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#ccf437] text-black shadow-sm">
+                    <PieChart size={24} />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold text-zinc-900 group-hover:text-black">
+                    Budget Check
+                  </h3>
+                  <p className="text-sm text-zinc-500 leading-relaxed">
+                    Verify account balances and approve spending limits against department budgets.
+                  </p>
+                </div>
+
+                <div className="hidden sm:block text-zinc-300">
+                  <ArrowRight size={24} strokeWidth={1.5} />
+                </div>
+                 {/* Mobile arrow */}
+                <div className="block sm:hidden text-zinc-300 self-center transform rotate-90 my-[-10px]">
+                   <ArrowRight size={24} strokeWidth={1.5} />
+                </div>
+
+                {/* Card 4: Smart Payments */}
+                <div className="group flex flex-1 flex-col items-start rounded-2xl border border-dashed border-zinc-200 bg-white p-6 text-left transition-all hover:border-zinc-300 hover:shadow-md">
+                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#ccf437] text-black shadow-sm">
+                    <CreditCard size={24} />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold text-zinc-900 group-hover:text-black">
+                     Smart Payments
+                  </h3>
+                  <p className="text-sm text-zinc-500 leading-relaxed">
+                     CFO sign and execute transaction smartly.
+                  </p>
+                </div>
+
               </div>
 
             </div>
