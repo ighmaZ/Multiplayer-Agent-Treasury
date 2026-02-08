@@ -4,9 +4,26 @@
 
 **Tresora** is a financial automation system designed to eliminate the manual overhead of crypto treasury management. By deploying a swarm of specialized AI agents, it transforms multi-day coordination tasks—like cross-chain invoice payments and compliance checks—into atomic, single-click approvals.
 
----
 
-## 🏗 System Architecture
+
+## Why This Matters
+
+
+Treasury ops for crypto teams are still manual and slow. Tresora compresses that process into a guided, auditable flow so teams can move faster with clearer risk signals.
+
+## What It Does (in 30 seconds)
+
+1. Upload an invoice PDF.
+2. Extract payment fields with Gemini (wallet, amount, recipient, purpose).
+3. Run an Etherscan-based wallet risk scan.
+4. Build a payment plan and CFO recommendation (`APPROVE`, `REVIEW`, `REJECT`).
+5. If approved, build a treasury execution plan:
+   - direct transfer, or
+   - swap on Sepolia + bridge to Arc Testnet + transfer.
+
+   ---
+
+##  System Architecture
 
 The system implements a **Multi-Agent Pattern** orchestrated by **LangGraph**, where discrete agents handle specific domains of the transaction lifecycle. This separation of concerns ensures security, deterministic behavior, and scalability.
 
@@ -46,7 +63,7 @@ Each agent operates with restricted permissions and specific tooling:
 
 ---
 
-## ⚡ Key Technical Features
+##  Key Technical Features
 
 ### State-Machine Execution
 Unlike standard chatbots, our agents don't just "chat." They maintain a **Stateful Execution Plan**. The system drafts a multi-step dependency graph (e.g., `Swap` → `Bridge` → `Transfer`) and executes it recursively. If a step fails (e.g., high slippage), the state machine halts and requests human intervention, ensuring no funds are ever lost to race conditions.
@@ -59,7 +76,7 @@ Security is paramount. The application **never holds private keys**. All transac
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 *   Node.js 18+
@@ -103,21 +120,21 @@ Security is paramount. The application **never holds private keys**. All transac
 
 ---
 
-## 🛠 Technology Stack
+##  Technology Stack
 
-### 🧠 Artificial Intelligence (AI) & Agents
+###  Artificial Intelligence (AI) & Agents
 *   **Orchestration:** LangGraph (Stateful Multi-Agent Workflows)
 *   **LLM:** Gemini(`@google/generative-ai`)
 *   **Framework:** LangChain (`@langchain/core`, `@langchain/google-genai`)
 
-### ⛓️ Blockchain & DeFi
+###  Blockchain & DeFi
 *   **Wallet Infrastructure:** Circle Developer-Controlled Wallets (`@circle-fin/developer-controlled-wallets`)
 *   **Cross-Chain Bridging:** Circle CCTP (`@circle-fin/bridge-kit`)
 *   **Swapping:** Uniswap V4 SDK (`@uniswap/v4-sdk`)
 *   **Routing:** Uniswap Universal Router (`@uniswap/universal-router-sdk`)
 *   **Client:** Viem (Type-safe Ethereum Interactions)
 
-### 💻 Frontend & UI
+###  Frontend & UI
 *   **Framework:** Next.js 16 (App Router) + React 19
 *   **Styling:** Tailwind CSS v4 (`@tailwindcss/postcss`)
 *   **Animations:** Framer Motion (`framer-motion`)
@@ -125,11 +142,11 @@ Security is paramount. The application **never holds private keys**. All transac
 *   **Notifications:** React Hot Toast (`react-hot-toast`)
 *   **Visualizations:** React Flow (`reactflow`)
 
-### 🔧 Utilities
+###  Utilities
 *   **Validation:** Zod (`zod`)
 *   **Processing:** PDF Parse / PDF2Pic (Invoice Ingestion)
 *   **Security Scanning:** Etherscan API
 
 ---
 
-*Built for the [Event Name] Hackathon 2026.*
+
