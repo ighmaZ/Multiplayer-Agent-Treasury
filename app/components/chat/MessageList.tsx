@@ -186,7 +186,6 @@ export function MessageList({ state, isLoading, onApprove, isApproving, executio
 
   const hasInvoice = Boolean(state?.invoiceData);
   const hasSecurity = Boolean(state?.securityScan);
-  const hasPayment = Boolean(state?.paymentPlan);
   const hasRecommendation = Boolean(state?.recommendation);
   const hasTreasury = Boolean(state?.treasuryPlan);
 
@@ -319,120 +318,6 @@ export function MessageList({ state, isLoading, onApprove, isApproving, executio
         </Card>
       )}
 
-      {/* Payment Plan */}
-      {state?.paymentPlan && (
-        <Card gradient>
-          <CardHeader 
-            icon={Wallet} 
-            title="Payment Plan" 
-            step={3}
-            isComplete={hasPayment}
-            badge={
-              <div className={`
-                flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide
-                ${state.paymentPlan.status === 'READY'
-                  ? 'bg-[#ccf437]/20 text-[#8ab320] ring-1 ring-[#ccf437]/40'
-                  : state.paymentPlan.status === 'INSUFFICIENT_FUNDS'
-                  ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-200'
-                  : 'bg-red-100 text-red-700 ring-1 ring-red-200'
-                }
-              `}>
-                <div className={`h-1.5 w-1.5 rounded-full ${
-                  state.paymentPlan.status === 'READY' ? 'bg-[#ccf437] animate-pulse' : 
-                  state.paymentPlan.status === 'INSUFFICIENT_FUNDS' ? 'bg-amber-500' : 'bg-red-500'
-                }`} />
-                {state.paymentPlan.status}
-              </div>
-            }
-          />
-
-          {/* Method highlight */}
-          <div className="mb-5 rounded-xl bg-gradient-to-r from-zinc-900 to-zinc-800 p-4 text-white shadow-lg">
-            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Payment Method</div>
-            <div className="flex items-center gap-2 text-base font-semibold">
-              {state.paymentPlan.method === 'DIRECT_USDC_TRANSFER' ? (
-                <>
-                  <span>Direct USDC Transfer</span>
-                </>
-              ) : (
-                <>
-                  <span>Swap ETH</span>
-                  <ArrowRight className="h-4 w-4 text-white/70" />
-                  <span>USDC</span>
-                  <span className="ml-1 text-xs font-medium text-zinc-400">(Exact Output)</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <DataField 
-              label="Invoice Amount" 
-              value={state.paymentPlan.invoiceAmountUSDC
-                ? formatTokenAmount(state.paymentPlan.invoiceAmountUSDC, 6, 'USDC')
-                : state.invoiceData?.amount}
-              highlight
-            />
-            <DataField 
-              label="Slippage Tolerance" 
-              value={`${(state.paymentPlan.slippageBps / 100).toFixed(2)}%`}
-            />
-            <DataField 
-              label="USDC Balance" 
-              value={formatTokenAmount(state.paymentPlan.usdcBalance, 6, 'USDC')}
-            />
-            <DataField 
-              label="ETH Balance" 
-              value={formatTokenAmount(state.paymentPlan.ethBalanceWei, 18, 'ETH')}
-            />
-            {state.paymentPlan.maxEthInWei && (
-              <DataField 
-                label="Max ETH Required" 
-                value={formatTokenAmount(state.paymentPlan.maxEthInWei, 18, 'ETH')}
-                highlight
-              />
-            )}
-            <DataField 
-              label="Recipient" 
-              value={`${state.paymentPlan.recipientAddress.slice(0, 10)}...${state.paymentPlan.recipientAddress.slice(-8)}`}
-              isCode
-            />
-          </div>
-
-          {state.paymentPlan.reason && (
-            <div className="mt-5 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50/50 p-4 ring-1 ring-amber-200/60">
-              <div className="flex items-start gap-2.5 text-sm text-amber-800">
-                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
-                <span className="leading-relaxed">{state.paymentPlan.reason}</span>
-              </div>
-            </div>
-          )}
-
-          {state.paymentPlan.preparedTransaction && (
-            <div className="mt-5 rounded-xl border border-zinc-200/80 bg-gradient-to-br from-zinc-50 to-zinc-100/50 p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                <Clock className="h-3.5 w-3.5" />
-                <span>Prepared Transaction</span>
-              </div>
-              <div className="space-y-2 font-mono text-xs text-zinc-600">
-                <div className="flex items-center gap-2">
-                  <span className="text-zinc-400">To:</span>
-                  <code className="rounded bg-white px-2 py-0.5 ring-1 ring-zinc-200">{state.paymentPlan.preparedTransaction.to}</code>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-zinc-400">Value:</span>
-                  <code className="rounded bg-white px-2 py-0.5 ring-1 ring-zinc-200">{formatTokenAmount(state.paymentPlan.preparedTransaction.value, 18, 'ETH')}</code>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-zinc-400">Purpose:</span>
-                  <span className="text-zinc-700">{state.paymentPlan.preparedTransaction.description}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </Card>
-      )}
 
       {/* CFO Recommendation */}
       {state?.recommendation && (
@@ -444,8 +329,8 @@ export function MessageList({ state, isLoading, onApprove, isApproving, executio
         >
           <CardHeader 
             icon={Brain} 
-            title="CFO Recommendation" 
-            step={4}
+            title="CFO Recommendation"
+            step={3}
             isComplete={hasRecommendation}
          
           />
@@ -537,7 +422,7 @@ export function MessageList({ state, isLoading, onApprove, isApproving, executio
           <CardHeader
             icon={Landmark}
             title="Treasury Execution Plan"
-            step={5}
+            step={4}
             isComplete={hasTreasury}
             badge={
               <div className={`
