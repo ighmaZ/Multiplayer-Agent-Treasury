@@ -39,6 +39,7 @@ export async function cfoAssistantNode(state: AgentState): Promise<AgentState> {
         riskScore: state.securityScan.riskScore,
         isContract: state.securityScan.isContract,
         isVerified: state.securityScan.isVerified,
+        hasMaliciousLabel: state.securityScan.hasMaliciousLabel,
         warnings: state.securityScan.warnings,
       },
       state.paymentPlan

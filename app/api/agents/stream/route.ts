@@ -182,7 +182,7 @@ async function walletScannerWithStream(
     sendEvent(controller, 'thinking', createThinkingLog(
       'walletScanner',
       'processing',
-      'Querying Etherscan API for transaction history, contract details, and any security labels or tags associated with this address...',
+      'Querying Arc RPC and ArcScan for transaction history, contract details, and available risk metadata for this address...',
       { progress: 40 }
     ));
 
@@ -362,6 +362,7 @@ async function cfoAssistantWithStream(
         riskScore: state.securityScan.riskScore,
         isContract: state.securityScan.isContract,
         isVerified: state.securityScan.isVerified,
+        hasMaliciousLabel: state.securityScan.hasMaliciousLabel,
         warnings: state.securityScan.warnings,
       },
       state.paymentPlan

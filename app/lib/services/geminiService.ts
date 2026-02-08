@@ -197,6 +197,7 @@ export async function generateCFORecommendation(
     riskScore: number;
     isContract: boolean;
     isVerified: boolean;
+    hasMaliciousLabel?: boolean;
     warnings: string[];
   },
   paymentPlan?: PaymentPlan | null
@@ -407,6 +408,7 @@ export async function* streamCFORecommendation(
     riskScore: number;
     isContract: boolean;
     isVerified: boolean;
+    hasMaliciousLabel?: boolean;
     warnings: string[];
   },
   paymentPlan?: PaymentPlan | null
