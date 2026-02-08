@@ -3,7 +3,6 @@
 
 'use client';
 
-import { formatUnits } from 'viem';
 import {
   FileText,
   Shield,
@@ -12,10 +11,7 @@ import {
   CheckCircle,
   XCircle,
   HelpCircle,
-  Wallet,
   ArrowRight,
-  Sparkles,
-  TrendingUp,
   Clock,
   ExternalLink,
   Landmark,
@@ -40,15 +36,6 @@ function getTxExplorerUrl(txHash: string, stepId: string): string {
   }
   // Bridge mint + Arc transfer use Arc testnet Blockscout explorer
   return `https://testnet.arcscan.app/tx/${txHash}`;
-}
-
-function formatTokenAmount(value: string | null | undefined, decimals: number, symbol: string) {
-  if (!value) return 'N/A';
-  try {
-    return `${formatUnits(BigInt(value), decimals)} ${symbol}`;
-  } catch {
-    return `${value} ${symbol}`;
-  }
 }
 
 // Step indicator component for visual progress

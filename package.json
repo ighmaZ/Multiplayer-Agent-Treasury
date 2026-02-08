@@ -13,8 +13,6 @@
     "@circle-fin/bridge-kit": "^1.5.0",
     "@circle-fin/developer-controlled-wallets": "^10.1.0",
     "@google/generative-ai": "^0.24.1",
-    "@langchain/core": "^1.1.19",
-    "@langchain/google-genai": "^2.1.15",
     "@langchain/langgraph": "^1.1.3",
     "@uniswap/sdk-core": "latest",
     "@uniswap/universal-router-sdk": "latest",
@@ -23,14 +21,11 @@
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "pdf-parse": "^2.4.5",
-    "pdf2pic": "^3.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hot-toast": "^2.6.0",
-    "reactflow": "^11.11.4",
     "typewriter-effect": "^2.22.0",
-    "viem": "latest",
-    "zod": "^4.3.6"
+    "viem": "latest"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

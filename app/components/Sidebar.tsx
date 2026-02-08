@@ -1,24 +1,27 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { MessageSquarePlus, Landmark, FileText } from "lucide-react";
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { MessageSquarePlus, Landmark, FileText } from 'lucide-react';
 
 export function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/", label: "Pay Invoice", icon: FileText },
-    { href: "/treasury", label: "Treasury", icon: Landmark },
+    { href: '/', label: 'Pay Invoice', icon: FileText },
+    { href: '/treasury', label: 'Treasury', icon: Landmark },
   ];
 
   return (
     <aside className="hidden h-screen w-[280px] flex-col bg-[#0f0f10] text-zinc-400 md:flex">
       {/* Header / Logo */}
       <div className="flex h-14 items-center gap-2 px-4">
-        <img
+        <Image
           src="/v2logo.png"
           alt="Tresora Logo"
+          width={32}
+          height={32}
           className="h-8 w-8 rounded-lg invert"
         />
         <span className="font-semibold text-white">Tresora</span>

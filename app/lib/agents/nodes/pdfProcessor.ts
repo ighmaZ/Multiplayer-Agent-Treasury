@@ -2,7 +2,6 @@
 // PDF Processor Agent Node - Extracts invoice data from PDF
 
 import { extractInvoiceFromPDF } from '@/app/lib/services/geminiService';
-import { fileToBuffer } from '@/app/lib/services/pdfService';
 import { AgentState, addLog } from '../state';
 
 /**

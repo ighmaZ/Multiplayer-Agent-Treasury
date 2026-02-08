@@ -104,7 +104,6 @@ const UNIVERSAL_ROUTER_ABI = [
   },
 ] as const;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cachedClient: ReturnType<typeof createPublicClient> | null = null;
 
 function getPublicClient() {

@@ -17,6 +17,19 @@ export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const handleFile = useCallback((file: File) => {
+    setError(null);
+    
+    const validation = validatePDFFile(file);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid file');
+      return;
+    }
+
+    setSelectedFile(file);
+    onFileSelect(file);
+  }, [onFileSelect]);
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -35,27 +48,14 @@ export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
     if (files.length > 0) {
       handleFile(files[0]);
     }
-  }, []);
+  }, [handleFile]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       handleFile(files[0]);
     }
-  }, []);
-
-  const handleFile = (file: File) => {
-    setError(null);
-    
-    const validation = validatePDFFile(file);
-    if (!validation.valid) {
-      setError(validation.error || 'Invalid file');
-      return;
-    }
-
-    setSelectedFile(file);
-    onFileSelect(file);
-  };
+  }, [handleFile]);
 
   const clearFile = () => {
     setSelectedFile(null);

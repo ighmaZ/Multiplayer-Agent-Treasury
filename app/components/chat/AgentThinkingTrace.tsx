@@ -71,9 +71,8 @@ function useStableTypewriter(text: string, isStreaming: boolean, speed: number =
   const lastTimeRef = useRef(0);
 
   useEffect(() => {
-    // If not streaming, show all text immediately
+    // If not streaming, mark text as complete and stop animating.
     if (!isStreaming) {
-      setDisplayedText(text);
       displayedLengthRef.current = text.length;
       return;
     }
@@ -81,7 +80,7 @@ function useStableTypewriter(text: string, isStreaming: boolean, speed: number =
     // If text shrunk (new step started), reset
     if (text.length < displayedLengthRef.current) {
       displayedLengthRef.current = 0;
-      setDisplayedText('');
+      lastTimeRef.current = 0;
     }
 
     // Already caught up - nothing to animate
@@ -121,7 +120,7 @@ function useStableTypewriter(text: string, isStreaming: boolean, speed: number =
     };
   }, [text, isStreaming, speed]);
 
-  const isTyping = isStreaming && displayedLengthRef.current < text.length;
+  const isTyping = isStreaming && displayedText.length < text.length;
 
   return { displayedText, isTyping };
 }
