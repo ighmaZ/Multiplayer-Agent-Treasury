@@ -108,7 +108,11 @@ export function ChatInterface(): React.JSX.Element {
                       const existingIndex = prev.findIndex(l => l.step === data.step);
                       if (existingIndex >= 0) {
                         const updated = [...prev];
-                        updated[existingIndex] = data;
+                        // Preserve stable id to avoid remount/flicker
+                        updated[existingIndex] = {
+                          ...data,
+                          id: prev[existingIndex].id,
+                        };
                         return updated;
                       }
                       return [...prev, data];
