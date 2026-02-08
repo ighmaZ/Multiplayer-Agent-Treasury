@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "Tresora - Treasury Management",
   description: "AI-powered treasury management with multi-chain payments",
   icons: {
-    icon: '/favicon.svg',
+    icon: "/v2logo.png",
   },
 };
 
@@ -37,7 +37,7 @@ export default function RootLayout({
           toastOptions={{
             duration: 2800,
             className:
-              'rounded-2xl border border-white/10 bg-zinc-950/95 px-4 py-3 text-sm font-medium text-white shadow-[0_20px_60px_-25px_rgba(0,0,0,0.6)] backdrop-blur',
+              "rounded-2xl border border-white/10 bg-zinc-950/95 px-4 py-3 text-sm font-medium text-white shadow-[0_20px_60px_-25px_rgba(0,0,0,0.6)] backdrop-blur",
           }}
         />
         <div className="flex h-screen w-full overflow-hidden bg-black font-sans">
